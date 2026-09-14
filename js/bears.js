@@ -30,55 +30,91 @@ function fetchImageUrl(fileName) {
       var pages = data.query.pages;
       var page = Object.values(pages)[0];
       return page.imageinfo[0].url;
+    })
+    .catch(function () {
+      return "";
     });
 }
 
+function matchField(row, field) {
+  var regex = new RegExp("\\|" + field + "=(.*?)(?=\\s*\\|[\\w-]+=|$)", "m");
+  var match = row.match(regex);
+  return match ? match[1].trim() : "";
+}
+
+function cleanRange(text) {
+  return text
+    .replace(/<ref[^>]*\/>/g, "")
+    .replace(/<ref[\s\S]*?<\/ref>/g, "")
+    .replace(/\{\{[^{}]*\}\}/g, "")
+    .replace(/\[\[(?:[^\]|]*\|)?([^\]]*)\]\]/g, "$1")
+    .replace(/'''?/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function extractBears(wikitext) {
-  var speciesTables = wikitext.split("{{Species table/end}}");
+  var rows = [];
+  wikitext.split("{{Species table/end}}").forEach(function (table) {
+    table
+      .split("{{Species table/row")
+      .slice(1)
+      .forEach(function (row) {
+        rows.push(row);
+      });
+  });
+
   var bears = [];
-  speciesTables.forEach(function (table) {
-    var rows = table.split("{{Species table/row");
-    rows.forEach(function (row) {
-      var nameMatch = row.match(/\|name=\[\[(.*?)\]\]/);
-      var binomialMatch = row.match(/\|binomial=(.*?)\n/);
-      var imageMatch = row.match(/\|image=(.*?)\n/);
+  rows.forEach(function (row) {
+    var name = matchField(row, "name");
+    var nameMatch = name.match(/\[\[(?:[^\]|]*\|)?([^\]]*)\]\]/);
+    if (!nameMatch) return;
 
-      if (nameMatch && binomialMatch && imageMatch) {
-        var fileName = imageMatch[1].trim().replace("File:", "");
+    var binomial = matchField(row, "binomial");
+    var image = matchField(row, "image");
+    var range = matchField(row, "range");
 
-        fetchImageUrl(fileName).then(function (imageUrl) {
-          var bear = {
-            name: nameMatch[1],
-            binomial: binomialMatch[1],
-            image: imageUrl,
-            range: "TODO extract correct range",
-          };
-          bears.push(bear);
+    bears.push({
+      name: nameMatch[1].trim(),
+      binomial: binomial || "Unknown",
+      file: image.replace("File:", ""),
+      range: range ? cleanRange(range) : "Unknown",
+    });
+  });
 
-          if (bears.length === rows.length) {
-            var moreBears = document.querySelector(".more_bears");
-            bears.forEach(function (bear) {
-              var html =
-                '<div class="bear">' +
-                '<img src="' +
-                bear.image +
-                '" alt="Image of ' +
-                bear.name +
-                '" style="width:200px; height:auto;">' +
-                "<p><b>" +
-                bear.name +
-                "</b> (" +
-                bear.binomial +
-                ")</p>" +
-                "<p>Range: " +
-                bear.range +
-                "</p>" +
-                "</div>";
-              moreBears.innerHTML += html;
-            });
-          }
-        });
+  Promise.all(
+    bears.map(function (bear) {
+      if (!bear.file) {
+        bear.image = "";
+        return bear;
       }
+      return fetchImageUrl(bear.file).then(function (imageUrl) {
+        bear.image = imageUrl;
+        return bear;
+      });
+    }),
+  ).then(function (loadedBears) {
+    var moreBears = document.querySelector(".more_bears");
+    loadedBears.forEach(function (bear) {
+      var html =
+        '<div class="bear">' +
+        (bear.image
+          ? '<img src="' +
+            bear.image +
+            '" alt="Image of ' +
+            bear.name +
+            '" style="width:200px; height:auto;">'
+          : "") +
+        "<p><b>" +
+        bear.name +
+        "</b> (" +
+        bear.binomial +
+        ")</p>" +
+        "<p>Range: " +
+        bear.range +
+        "</p>" +
+        "</div>";
+      moreBears.innerHTML += html;
     });
   });
 }
