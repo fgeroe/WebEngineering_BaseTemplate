@@ -26,7 +26,7 @@ export function initSearch() {
             regex,
             '<mark class="highlight">$1</mark>',
           );
-          node.replaceWith.apply(node, span.childNodes);
+          node.replaceWith(...span.childNodes);
         }
       } else if (
         node.nodeType === 1 &&
@@ -34,10 +34,9 @@ export function initSearch() {
         node.tagName !== "STYLE" &&
         node.tagName !== "FORM"
       ) {
-        node.childNodes.forEach(walk);
+        Array.from(node.childNodes).forEach(walk);
       }
     }
-
-    walk(document.body);
+    walk(document.querySelector("main"));
   });
 }

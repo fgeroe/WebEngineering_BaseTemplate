@@ -1,48 +1,44 @@
-// Show/hide comments toggle
 export function initCommentToggle() {
-  var showHideBtn = document.querySelector(".show-hide");
-  var commentWrapper = document.querySelector(".comment-wrapper");
+  const showHideBtn = document.querySelector(".show-hide");
+  const commentWrapper = document.querySelector(".comment-wrapper");
 
-  commentWrapper.style.display = "none";
+  commentWrapper.hidden = true;
 
-  showHideBtn.onclick = function () {
-    var showHideText = showHideBtn.textContent;
-    if (showHideText === "Show comment") {
-      showHideBtn.textContent = "Hide comments";
-      commentWrapper.style.display = "block";
-    } else {
-      showHideBtn.textContent = "Show comments";
-      commentWrapper.style.display = "none";
-    }
-  };
+  showHideBtn.addEventListener("click", () => {
+    commentWrapper.hidden = !commentWrapper.hidden;
+    showHideBtn.textContent = commentWrapper.hidden
+      ? "Show comments"
+      : "Hide comments";
+    showHideBtn.setAttribute("aria-expanded", String(!commentWrapper.hidden));
+  });
 }
 
 export function initCommentForm() {
-  // Comment form stuff
-  var form = document.querySelector(".comment-form");
-  var nameField = document.querySelector("#name");
-  var commentField = document.querySelector("#comment");
-  var list = document.querySelector(".comment-container");
+  const form = document.querySelector(".comment-form");
+  const nameField = document.querySelector("#name");
+  const commentField = document.querySelector("#comment");
+  const list = document.querySelector(".comment-container");
 
-  form.onsubmit = function (e) {
+  form.addEventListener("submit", (e) => {
     e.preventDefault();
 
-    var listItem = document.createElement("li");
-    var namePara = document.createElement("p");
-    var commentPara = document.createElement("p");
-    var nameValue = nameField.valeu;
-    var commentValue = commentField.value;
+    const nameValue = nameField.value.trim();
+    const commentValue = commentField.value.trim();
 
-    namePara.textContnet = nameValue;
+    if (!nameValue || !commentValue) return;
+
+    const listItem = document.createElement("li");
+    const namePara = document.createElement("p");
+    const commentPara = document.createElement("p");
+
+    namePara.textContent = nameValue;
     commentPara.textContent = commentValue;
 
-    console.log(nameValue);
-
-    list.appendChild(listItem);
     listItem.appendChild(namePara);
     listItem.appendChild(commentPara);
+    list.appendChild(listItem);
 
     nameField.value = "";
     commentField.value = "";
-  };
+  });
 }
