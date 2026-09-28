@@ -23,7 +23,7 @@ h1,
 h2,
 h3,
 h4 {
-  font-family: "Sonsie One", cursive;
+  font-family: 'Sonsie One', cursive;
   color: #2a2a2a;
 }
 
@@ -32,7 +32,7 @@ input,
 li,
 table,
 label {
-  font-family: "Open Sans Condensed", sans-serif;
+  font-family: 'Open Sans Condensed', sans-serif;
   color: #2a2a2a;
 }
 
@@ -121,11 +121,11 @@ nav .search {
   height: 32px;
 }
 
-.search input[type="search"] {
+.search input[type='search'] {
   flex: 3;
 }
 
-.search input[type="submit"] {
+.search input[type='submit'] {
   flex: 1;
   margin-left: 1rem;
   background: #333;
@@ -168,7 +168,7 @@ td {
   text-align: center;
 }
 
-th[scope="col"] {
+th[scope='col'] {
   border-bottom: 1px solid black;
 }
 
@@ -239,14 +239,14 @@ audio {
   line-height: 32px;
 }
 
-.comment-form input[type="submit"],
+.comment-form input[type='submit'],
 .show-hide {
   background: #333;
   border: 0;
   color: white;
 }
 
-.comment-form input[type="submit"] {
+.comment-form input[type='submit'] {
   width: 30%;
   display: block;
   margin: 0 auto;
