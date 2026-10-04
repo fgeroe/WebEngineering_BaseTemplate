@@ -1,19 +1,15 @@
-import { useState, type SubmitEvent, type JSX } from 'react';
-import { getElement } from '../dom';
-import { clearHighlights, highlightMatches } from './highlight';
+import { useState, type JSX, type SubmitEvent } from 'react';
 
-function Search(): JSX.Element {
+interface SearchProps {
+  onSearch: (term: string) => void;
+}
+
+function Search({ onSearch }: SearchProps): JSX.Element {
   const [query, setQuery] = useState('');
 
   function handleSubmit(event: SubmitEvent<HTMLFormElement>): void {
     event.preventDefault();
-
-    clearHighlights();
-
-    const searchKey = query.trim();
-    if (searchKey === '') return;
-
-    highlightMatches(getElement('main', HTMLElement), searchKey);
+    onSearch(query.trim());
   }
 
   return (

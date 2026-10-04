@@ -1,4 +1,5 @@
 import type { JSX } from 'react';
+import HighlightedText from '../search/HighlightedText';
 
 const relatedLinks = [
   'The trouble with Bees',
@@ -11,11 +12,15 @@ const relatedLinks = [
 function RelatedLinks(): JSX.Element {
   return (
     <aside>
-      <h2>Related</h2>
+      <h2>
+        <HighlightedText>Related</HighlightedText>
+      </h2>
       <ul>
-        {relatedLinks.map((label) => (
-          <li key={label}>
-            <a href="#">{label}</a>
+        {relatedLinks.map((title) => (
+          <li key={title}>
+            <a href="#">
+              <HighlightedText>{title}</HighlightedText>
+            </a>
           </li>
         ))}
       </ul>

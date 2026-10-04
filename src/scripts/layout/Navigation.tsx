@@ -3,7 +3,11 @@ import Search from '../search/Search';
 
 const navLinks = ['Home', 'Our team', 'Projects', 'Blog'];
 
-function Navigation(): JSX.Element {
+interface NavigationProps {
+  onSearch: (term: string) => void;
+}
+
+function Navigation({ onSearch }: NavigationProps): JSX.Element {
   return (
     <nav>
       <ul>
@@ -14,7 +18,7 @@ function Navigation(): JSX.Element {
         ))}
       </ul>
 
-      <Search />
+      <Search onSearch={onSearch} />
     </nav>
   );
 }

@@ -1,8 +1,8 @@
 import { useEffect, useState, type JSX } from 'react';
 import BearList from './BearList';
-
-import type { BearWithImage } from './types';
 import { fetchBears } from './bearAPI';
+import type { BearWithImage } from './types';
+import HighlightedText from '../search/HighlightedText';
 
 function MoreBears(): JSX.Element {
   const [bears, setBears] = useState<BearWithImage[]>([]);
@@ -33,7 +33,9 @@ function MoreBears(): JSX.Element {
 
   return (
     <section className="more_bears">
-      <h2>More Bears</h2>
+      <h2>
+        <HighlightedText>More Bears</HighlightedText>
+      </h2>
       {isLoading && <p>Loading bears…</p>}
       {error !== null && (
         <p style={{ color: '#c33' }}>

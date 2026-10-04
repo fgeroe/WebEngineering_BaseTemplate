@@ -1,5 +1,6 @@
 import type { JSX } from 'react';
 import type { BearType } from './bearTypes';
+import HighlightedText from '../search/HighlightedText';
 
 interface BearTypesTableProps {
   bearTypes: BearType[];
@@ -22,12 +23,24 @@ function BearTypesTable({ bearTypes }: BearTypesTableProps): JSX.Element {
       <tbody>
         {bearTypes.map((bearType) => (
           <tr key={bearType.type}>
-            <td>{bearType.type}</td>
-            <td>{bearType.coat}</td>
-            <td>{bearType.adultSize}</td>
-            <td>{bearType.habitat}</td>
-            <td>{bearType.lifespan}</td>
-            <td>{bearType.diet}</td>
+            <td>
+              <HighlightedText>{bearType.type}</HighlightedText>
+            </td>
+            <td>
+              <HighlightedText>{bearType.coat}</HighlightedText>
+            </td>
+            <td>
+              <HighlightedText>{bearType.adultSize}</HighlightedText>
+            </td>
+            <td>
+              <HighlightedText>{bearType.habitat}</HighlightedText>
+            </td>
+            <td>
+              <HighlightedText>{bearType.lifespan}</HighlightedText>
+            </td>
+            <td>
+              <HighlightedText>{bearType.diet}</HighlightedText>
+            </td>
           </tr>
         ))}
       </tbody>
