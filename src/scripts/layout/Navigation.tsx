@@ -1,24 +1,38 @@
 import type { JSX } from 'react';
+import { NavLink } from 'react-router';
 import Search from '../search/Search';
 
-const navLinks = ['Home', 'Our team', 'Projects', 'Blog'];
+const routeLinks = [
+  { label: 'Home', to: '/' },
+  { label: 'Bears', to: '/bears' },
+];
+
+const placeholderLinks = ['Our team', 'Projects', 'Blog'];
 
 interface NavigationProps {
+  searchTerm: string;
   onSearch: (term: string) => void;
 }
 
-function Navigation({ onSearch }: NavigationProps): JSX.Element {
+function Navigation({ searchTerm, onSearch }: NavigationProps): JSX.Element {
   return (
     <nav>
       <ul>
-        {navLinks.map((label) => (
+        {routeLinks.map((link) => (
+          <li key={link.to}>
+            <NavLink to={link.to} end>
+              {link.label}
+            </NavLink>
+          </li>
+        ))}
+        {placeholderLinks.map((label) => (
           <li key={label}>
             <a href="#">{label}</a>
           </li>
         ))}
       </ul>
 
-      <Search onSearch={onSearch} />
+      <Search key={searchTerm} initialQuery={searchTerm} onSearch={onSearch} />
     </nav>
   );
 }
