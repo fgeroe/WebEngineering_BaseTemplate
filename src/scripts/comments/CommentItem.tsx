@@ -1,5 +1,6 @@
 import type { JSX } from 'react';
 import type { CommentEntry } from './types';
+import HighlightedText from '../search/HighlightedText';
 
 interface CommentItemProps {
   comment: CommentEntry;
@@ -8,8 +9,12 @@ interface CommentItemProps {
 function CommentItem({ comment }: CommentItemProps): JSX.Element {
   return (
     <li>
-      <p>{comment.name}</p>
-      <p>{comment.text}</p>
+      <p>
+        <HighlightedText>{comment.name}</HighlightedText>
+      </p>
+      <p>
+        <HighlightedText>{comment.text}</HighlightedText>
+      </p>
     </li>
   );
 }

@@ -8,43 +8,64 @@ import CommentSection from '../comments/CommentSection';
 import AuthorBio from './AuthorBio';
 import BearTypesTable from './BearTypesTable';
 import { bearTypes } from './bearTypes';
+import HighlightedText from '../search/HighlightedText';
 
 function Article(): JSX.Element {
   return (
     <article>
-      <h1>The trouble with Bears</h1>
-
-      <p>By Evan Wild</p>
+      <h1>
+        <HighlightedText>The trouble with Bears</HighlightedText>
+      </h1>
 
       <p>
-        Tall, lumbering, angry, dangerous. The real live bears of this world are
-        proud, independent creatures, self-serving and always on the hunt for
-        food.
+        <HighlightedText>By Evan Wild</HighlightedText>
       </p>
 
-      <h2>Types of bear</h2>
+      <p>
+        <HighlightedText>
+          Tall, lumbering, angry, dangerous. The real live bears of this world
+          are proud, independent creatures, self-serving and always on the hunt
+          for food.
+        </HighlightedText>
+      </p>
+
+      <h2>
+        <HighlightedText>Types of bear</HighlightedText>
+      </h2>
 
       <BearTypesTable bearTypes={bearTypes} />
 
-      <h2>Habitats and Eating habits</h2>
+      <h2>
+        <HighlightedText>Habitats and Eating habits</HighlightedText>
+      </h2>
 
       <p>
-        Wild bears eat a variety of meat, fish, fruit, nuts, and other natually
-        growing ingredients...
+        <HighlightedText>
+          Wild bears eat a variety of meat, fish, fruit, nuts, and other
+          natually growing ingredients...
+        </HighlightedText>
       </p>
 
       <img src={wildBear} alt="Wild bear in forest" />
 
       <p>
-        Urban (gentrified) bears on the other hand have largely abandoned the
-        old ways...
+        <HighlightedText>
+          Urban (gentrified) bears on the other hand have largely abandoned the
+          old ways...
+        </HighlightedText>
       </p>
 
       <img src={urbanBear} alt="Urban bear near buildings" />
 
-      <h2>Mating rituals</h2>
+      <h2>
+        <HighlightedText>Mating rituals</HighlightedText>
+      </h2>
 
-      <p>Bears are romantic creatures by nature...</p>
+      <p>
+        <HighlightedText>
+          Bears are romantic creatures by nature...
+        </HighlightedText>
+      </p>
 
       <audio controls>
         <source src={bearMp3} type="audio/mpeg" />
