@@ -1,11 +1,12 @@
 import { useState, type JSX, type SubmitEvent } from 'react';
 
 interface SearchProps {
+  initialQuery: string;
   onSearch: (term: string) => void;
 }
 
-function Search({ onSearch }: SearchProps): JSX.Element {
-  const [query, setQuery] = useState('');
+function Search({ initialQuery, onSearch }: SearchProps): JSX.Element {
+  const [query, setQuery] = useState(initialQuery);
 
   function handleSubmit(event: SubmitEvent<HTMLFormElement>): void {
     event.preventDefault();

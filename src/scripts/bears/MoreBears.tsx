@@ -1,52 +1,27 @@
-import { useEffect, useState, type JSX } from 'react';
+import type { JSX } from 'react';
 import BearList from './BearList';
-import { fetchBears } from './bearAPI';
+import { useBears } from './bearsContext';
 import type { BearWithImage } from './types';
 import HighlightedText from '../search/HighlightedText';
 
-type BearsState =
-  | { status: 'loading' }
-  | { status: 'success'; bears: BearWithImage[] }
-  | { status: 'empty' }
-  | { status: 'error'; message: string };
+function matchesFilter(bear: BearWithImage, filter: string): boolean {
+  const needle = filter.toLowerCase();
+  return [bear.name, bear.binomial, bear.range].some((value) =>
+    value.toLowerCase().includes(needle)
+  );
+}
 
-function MoreBears(): JSX.Element {
-  const [state, setState] = useState<BearsState>({ status: 'loading' });
-  const [requestId, setRequestId] = useState(0);
+interface MoreBearsProps {
+  filter?: string;
+}
 
-  useEffect(() => {
-    const controller = new AbortController();
+function MoreBears({ filter = '' }: MoreBearsProps): JSX.Element {
+  const { state, reload } = useBears();
 
-    async function load(): Promise<void> {
-      try {
-        const bears = await fetchBears(controller.signal);
-        if (controller.signal.aborted) return;
-        setState(
-          bears.length === 0
-            ? { status: 'empty' }
-            : { status: 'success', bears }
-        );
-      } catch (err) {
-        if (controller.signal.aborted) return;
-        console.error('fetchBears:', err);
-        setState({
-          status: 'error',
-          message: err instanceof Error ? err.message : String(err),
-        });
-      }
-    }
-
-    void load();
-
-    return () => {
-      controller.abort();
-    };
-  }, [requestId]);
-
-  function reload(): void {
-    setState({ status: 'loading' });
-    setRequestId((previous) => previous + 1);
-  }
+  const visibleBears =
+    state.status === 'success'
+      ? state.bears.filter((bear) => matchesFilter(bear, filter))
+      : [];
 
   return (
     <section className="more_bears">
@@ -68,7 +43,11 @@ function MoreBears(): JSX.Element {
         </p>
       )}
 
-      {state.status === 'success' && <BearList bears={state.bears} />}
+      {state.status === 'success' && visibleBears.length === 0 && (
+        <p>No bears match &quot;{filter}&quot;.</p>
+      )}
+
+      {state.status === 'success' && <BearList bears={visibleBears} />}
     </section>
   );
 }

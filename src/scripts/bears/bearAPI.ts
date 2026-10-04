@@ -12,6 +12,8 @@ const params: Record<string, string> = {
   origin: '*',
 };
 
+// ---------- Validation of API data ----------
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
@@ -62,6 +64,8 @@ function extractImageUrl(data: unknown): string {
   const firstInfo = asRecord(imageinfo[0], 'image info');
   return getString(firstInfo, 'url');
 }
+
+// ---------- Network ----------
 
 async function fetchJson(url: string, signal: AbortSignal): Promise<unknown> {
   const res = await fetch(url, { signal });
@@ -119,10 +123,20 @@ async function resolveImage(
     }
     return { ok: true, url };
   } catch (err) {
+    // Re-throw aborted requests instead of treating them as image errors
     if (signal.aborted) throw err;
     console.error(bear.name + ':', err);
     return { ok: false, reason: 'Error while loading image' };
   }
+}
+
+// ---------- Parsing the wikitext ----------
+
+function toSlug(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
 }
 
 function matchField(row: string, field: string): string {
@@ -159,6 +173,7 @@ function extractBears(wikitext: string): Bear[] {
     const range = matchField(row, 'range');
 
     bears.push({
+      id: toSlug(binomial !== '' ? binomial : name),
       name,
       binomial: binomial !== '' ? binomial : 'Unknown',
       file: image !== '' ? image.replace('File:', '') : null,
@@ -168,6 +183,8 @@ function extractBears(wikitext: string): Bear[] {
 
   return bears;
 }
+
+// ---------- Public entry point ----------
 
 export async function fetchBears(
   signal: AbortSignal

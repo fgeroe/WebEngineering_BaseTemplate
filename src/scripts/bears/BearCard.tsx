@@ -1,4 +1,5 @@
 import type { JSX } from 'react';
+import { Link } from 'react-router';
 import BearImage from './BearImage';
 import type { BearWithImage } from './types';
 import HighlightedText from '../search/HighlightedText';
@@ -13,7 +14,9 @@ function BearCard({ bear }: BearCardProps): JSX.Element {
       <BearImage result={bear.imageResult} name={bear.name} />
       <p>
         <b>
-          <HighlightedText>{bear.name}</HighlightedText>
+          <Link to={`/bears/${bear.id}`}>
+            <HighlightedText>{bear.name}</HighlightedText>
+          </Link>
         </b>{' '}
         (<HighlightedText>{bear.binomial}</HighlightedText>)
       </p>
