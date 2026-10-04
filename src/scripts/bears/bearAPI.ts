@@ -63,15 +63,18 @@ function extractImageUrl(data: unknown): string {
   return getString(firstInfo, 'url');
 }
 
-async function fetchJson(url: string): Promise<unknown> {
-  const res = await fetch(url);
+async function fetchJson(url: string, signal: AbortSignal): Promise<unknown> {
+  const res = await fetch(url, { signal });
   if (!res.ok) {
     throw new Error('Server responded with ' + res.status);
   }
   return await res.json();
 }
 
-async function fetchImageUrl(fileName: string): Promise<string> {
+async function fetchImageUrl(
+  fileName: string,
+  signal: AbortSignal
+): Promise<string> {
   const imageParams: Record<string, string> = {
     action: 'query',
     titles: 'File:' + fileName,
@@ -82,7 +85,7 @@ async function fetchImageUrl(fileName: string): Promise<string> {
   };
 
   const url = baseUrl + '?' + new URLSearchParams(imageParams).toString();
-  const data = await fetchJson(url);
+  const data = await fetchJson(url, signal);
   return extractImageUrl(data);
 }
 
@@ -99,13 +102,16 @@ async function canLoadImage(url: string): Promise<boolean> {
   });
 }
 
-async function resolveImage(bear: Bear): Promise<ImageResult> {
+async function resolveImage(
+  bear: Bear,
+  signal: AbortSignal
+): Promise<ImageResult> {
   if (bear.file === null) {
     return { ok: false, reason: 'No image found' };
   }
 
   try {
-    const url = await fetchImageUrl(bear.file);
+    const url = await fetchImageUrl(bear.file, signal);
     const loadable = await canLoadImage(url);
 
     if (!loadable) {
@@ -113,6 +119,7 @@ async function resolveImage(bear: Bear): Promise<ImageResult> {
     }
     return { ok: true, url };
   } catch (err) {
+    if (signal.aborted) throw err;
     console.error(bear.name + ':', err);
     return { ok: false, reason: 'Error while loading image' };
   }
@@ -140,10 +147,6 @@ function extractBears(wikitext: string): Bear[] {
     .split('{{Species table/end}}')
     .flatMap((table) => table.split('{{Species table/row').slice(1));
 
-  if (rows.length === 0) {
-    throw new Error('No species table available');
-  }
-
   const bears: Bear[] = [];
   rows.forEach((row) => {
     const nameField = matchField(row, 'name');
@@ -163,23 +166,21 @@ function extractBears(wikitext: string): Bear[] {
     });
   });
 
-  if (bears.length === 0) {
-    throw new Error('No bears found in table');
-  }
-
   return bears;
 }
 
-export async function fetchBears(): Promise<BearWithImage[]> {
+export async function fetchBears(
+  signal: AbortSignal
+): Promise<BearWithImage[]> {
   const url = baseUrl + '?' + new URLSearchParams(params).toString();
-  const data = await fetchJson(url);
+  const data = await fetchJson(url, signal);
   const wikitext = extractWikitext(data);
   const bears = extractBears(wikitext);
 
   return await Promise.all(
     bears.map(async (bear) => ({
       ...bear,
-      imageResult: await resolveImage(bear),
+      imageResult: await resolveImage(bear, signal),
     }))
   );
 }
