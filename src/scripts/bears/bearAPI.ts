@@ -1,4 +1,4 @@
-import { getElement } from './dom';
+import type { Bear, BearWithImage, ImageResult } from './types';
 
 const baseUrl = 'https://en.wikipedia.org/w/api.php';
 const title = 'List_of_ursids';
@@ -11,19 +11,6 @@ const params: Record<string, string> = {
   format: 'json',
   origin: '*',
 };
-
-interface Bear {
-  name: string;
-  binomial: string;
-  file: string | null;
-  range: string;
-}
-
-type ImageResult = { ok: true; url: string } | { ok: false; reason: string };
-
-interface BearWithImage extends Bear {
-  imageResult: ImageResult;
-}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
@@ -46,7 +33,7 @@ function getRecord(
 function getArray(obj: Record<string, unknown>, key: string): unknown[] {
   const value = obj[key];
   if (!Array.isArray(value)) {
-    throw new Error(`"${key}" is not an Array`);
+    throw new Error(`"${key}" is not an array`);
   }
   return value;
 }
@@ -54,25 +41,25 @@ function getArray(obj: Record<string, unknown>, key: string): unknown[] {
 function getString(obj: Record<string, unknown>, key: string): string {
   const value = obj[key];
   if (typeof value !== 'string') {
-    throw new Error(`"${key}" is not a String`);
+    throw new Error(`"${key}" is not a string`);
   }
   return value;
 }
 
 function extractWikitext(data: unknown): string {
-  const response = asRecord(data, 'Antwort');
+  const response = asRecord(data, 'response');
   const parse = getRecord(response, 'parse');
   const wikitext = getRecord(parse, 'wikitext');
   return getString(wikitext, '*');
 }
 
 function extractImageUrl(data: unknown): string {
-  const response = asRecord(data, 'Antwort');
+  const response = asRecord(data, 'response');
   const query = getRecord(response, 'query');
   const pages = getRecord(query, 'pages');
-  const page = asRecord(Object.values(pages)[0], 'Seite');
+  const page = asRecord(Object.values(pages)[0], 'page');
   const imageinfo = getArray(page, 'imageinfo');
-  const firstInfo = asRecord(imageinfo[0], 'Bildinfo');
+  const firstInfo = asRecord(imageinfo[0], 'image info');
   return getString(firstInfo, 'url');
 }
 
@@ -164,9 +151,9 @@ function extractBears(wikitext: string): Bear[] {
     const name = nameMatch?.[1]?.trim();
     if (name === undefined || name === '') return;
 
+    const binomial = matchField(row, 'binomial');
     const image = matchField(row, 'image');
     const range = matchField(row, 'range');
-    const binomial = matchField(row, 'binomial');
 
     bears.push({
       name,
@@ -183,71 +170,16 @@ function extractBears(wikitext: string): Bear[] {
   return bears;
 }
 
-function showError(message: string): void {
-  const section = document.querySelector('.more_bears');
-  if (section === null) return;
-  const p = document.createElement('p');
-  p.style.color = '#c33';
-  p.textContent = message;
-  section.appendChild(p);
-}
+export async function fetchBears(): Promise<BearWithImage[]> {
+  const url = baseUrl + '?' + new URLSearchParams(params).toString();
+  const data = await fetchJson(url);
+  const wikitext = extractWikitext(data);
+  const bears = extractBears(wikitext);
 
-function renderBears(bears: BearWithImage[]): void {
-  const section = getElement('.more_bears', HTMLElement);
-
-  bears.forEach((bear) => {
-    const div = document.createElement('div');
-    div.className = 'bear';
-
-    if (bear.imageResult.ok) {
-      const img = document.createElement('img');
-      img.src = bear.imageResult.url;
-      img.alt = 'Image of ' + bear.name;
-      img.style.width = '200px';
-      img.style.height = 'auto';
-      div.appendChild(img);
-    } else {
-      const placeholder = document.createElement('div');
-      placeholder.textContent = bear.imageResult.reason;
-      placeholder.style.width = '200px';
-      placeholder.style.height = '120px';
-      placeholder.style.border = '2px dashed #999';
-      placeholder.style.color = '#666';
-      div.appendChild(placeholder);
-    }
-
-    const namePara = document.createElement('p');
-    const nameBold = document.createElement('b');
-    nameBold.textContent = bear.name;
-    namePara.append(nameBold, ' (' + bear.binomial + ')');
-    div.appendChild(namePara);
-
-    const rangePara = document.createElement('p');
-    rangePara.textContent = 'Range: ' + bear.range;
-    div.appendChild(rangePara);
-
-    section.appendChild(div);
-  });
-}
-
-export async function loadBears(): Promise<void> {
-  try {
-    const url = baseUrl + '?' + new URLSearchParams(params).toString();
-    const data = await fetchJson(url);
-    const wikitext = extractWikitext(data);
-    const bears = extractBears(wikitext);
-
-    const results: BearWithImage[] = await Promise.all(
-      bears.map(async (bear) => ({
-        ...bear,
-        imageResult: await resolveImage(bear),
-      }))
-    );
-
-    renderBears(results);
-  } catch (err) {
-    console.error('loadBears:', err);
-    const message = err instanceof Error ? err.message : String(err);
-    showError('Not possible to load list of bears: ' + message);
-  }
+  return await Promise.all(
+    bears.map(async (bear) => ({
+      ...bear,
+      imageResult: await resolveImage(bear),
+    }))
+  );
 }
