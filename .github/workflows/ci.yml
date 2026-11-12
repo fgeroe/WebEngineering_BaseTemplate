@@ -20,3 +20,24 @@ jobs:
       - run: npm run lint
       - run: npm run format:check
       - run: npm run build
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Build and start the stack
+        run: docker compose up --build --detach --wait
+
+      - name: Smoke test
+        run: |
+          curl --fail --include http://localhost:3000/health
+          curl --fail --silent --output /dev/null http://localhost:8080/
+
+      - name: Show logs
+        if: failure()
+        run: docker compose logs
+
+      - name: Stop the stack
+        if: always()
+        run: docker compose down

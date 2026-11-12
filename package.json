@@ -3,15 +3,18 @@
   "version": "1.0.0",
   "private": true,
   "description": "This repository is designed as the foundation for coding playgrounds in the Web Engineering course. It offers a structured space for experimenting with and mastering various web development technologies and practices.  The project is based on [this](https://developer.mozilla.org/en-US/docs/Learn/Accessibility/Accessibility_troubleshooting) repository from MDN.",
+  "workspaces": [
+    "apps/web",
+    "apps/api"
+  ],
   "scripts": {
-    "dev": "vite",
-    "build": "tsc && vite build",
-    "preview": "vite preview",
-    "typecheck": "tsc",
-    "lint": "eslint src --ext .js,.jsx,.ts,.tsx --max-warnings 0",
-    "lint:fix": "eslint src --ext .js,.jsx,.ts,.tsx --fix",
-    "format": "prettier --write \"src/**/*.{js,jsx,ts,tsx}\"",
-    "format:check": "prettier --check \"src/**/*.{js,jsx,ts,tsx}\"",
+    "dev": "concurrently --names web,api --prefix-colors blue,green \"npm run dev -w apps/web\" \"npm run dev -w apps/api\"",
+    "build": "npm run build --workspaces",
+    "typecheck": "npm run typecheck --workspaces",
+    "lint": "eslint apps --ext .js,.jsx,.ts,.tsx --max-warnings 0",
+    "lint:fix": "eslint apps --ext .js,.jsx,.ts,.tsx --fix",
+    "format": "prettier --write \"apps/*/src/**/*.{js,jsx,ts,tsx}\" \"apps/*/*.ts\"",
+    "format:check": "prettier --check \"apps/*/src/**/*.{js,jsx,ts,tsx}\" \"apps/*/*.ts\"",
     "prepare": "husky"
   },
   "repository": {
@@ -27,10 +30,8 @@
   },
   "homepage": "https://github.com/fgeroe/WebEngineering_BaseTemplate#readme",
   "devDependencies": {
-    "@types/react": "^19.3.0",
-    "@types/react-dom": "^19.3.0",
     "@typescript-eslint/eslint-plugin": "^6.21.0",
-    "@vitejs/plugin-react": "^6.1.1",
+    "concurrently": "^9.2.1",
     "eslint": "^8.57.1",
     "eslint-config-prettier": "^10.1.8",
     "eslint-config-standard-with-typescript": "^43.0.1",
@@ -43,18 +44,12 @@
     "husky": "^9.1.7",
     "lint-staged": "^17.6.0",
     "prettier": "^3.9.9",
-    "typescript": "5.9",
-    "vite": "^8.3.1"
+    "typescript": "5.9"
   },
   "lint-staged": {
-    "src/**/*.{js,jsx,ts,tsx}": [
+    "apps/*/{src/**/*,*}.{js,jsx,ts,tsx}": [
       "eslint --max-warnings 0",
       "prettier --check"
     ]
-  },
-  "dependencies": {
-    "react": "^19.3.0",
-    "react-dom": "^19.3.0",
-    "react-router": "^8.4.0"
   }
 }
