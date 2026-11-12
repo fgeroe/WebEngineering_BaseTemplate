@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { describeError } from '../api';
 import { createComment, deleteComment, fetchComments } from './commentAPI';
 import type { CommentEntry, NewComment } from './types';
 
@@ -11,10 +12,6 @@ export interface UseCommentsResult {
   state: CommentsState;
   addComment: (comment: NewComment) => Promise<void>;
   removeComment: (commentId: string) => Promise<void>;
-}
-
-function errorMessage(err: unknown): string {
-  return err instanceof Error ? err.message : String(err);
 }
 
 export function useComments(bearId: string): UseCommentsResult {
@@ -31,7 +28,7 @@ export function useComments(bearId: string): UseCommentsResult {
       } catch (err) {
         if (controller.signal.aborted) return;
         console.error('fetchComments:', err);
-        setState({ status: 'error', message: errorMessage(err) });
+        setState({ status: 'error', message: describeError(err) });
       }
     }
 

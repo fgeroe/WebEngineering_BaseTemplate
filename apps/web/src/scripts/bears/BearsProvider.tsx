@@ -1,4 +1,5 @@
 import { useEffect, useState, type JSX, type ReactNode } from 'react';
+import { describeError } from '../api';
 import { fetchBears } from './bearAPI';
 import { BearsContext, type BearsState } from './bearsContext';
 
@@ -27,7 +28,7 @@ function BearsProvider({ children }: BearsProviderProps): JSX.Element {
         console.error('fetchBears:', err);
         setState({
           status: 'error',
-          message: err instanceof Error ? err.message : String(err),
+          message: describeError(err),
         });
       }
     }

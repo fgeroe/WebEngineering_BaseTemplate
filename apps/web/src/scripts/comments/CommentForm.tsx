@@ -1,4 +1,5 @@
 import { useState, type SubmitEvent, type JSX } from 'react';
+import { describeError } from '../api';
 import { commentLimits, type NewComment } from './types';
 
 interface CommentFormProps {
@@ -19,9 +20,7 @@ function CommentForm({ onAddComment }: CommentFormProps): JSX.Element {
       setAuthor('');
       setText('');
     } catch (err) {
-      setError(
-        `Not possible to save comment: ${err instanceof Error ? err.message : String(err)}`
-      );
+      setError(`Not possible to save comment: ${describeError(err)}`);
     } finally {
       setIsSubmitting(false);
     }

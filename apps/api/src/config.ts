@@ -1,6 +1,10 @@
 import { z } from 'zod';
 
 const configSchema = z.object({
+  NODE_ENV: z
+    .enum(['development', 'production', 'test'])
+    .default('development'),
+  ENABLE_DEBUG_ROUTES: z.stringbool().optional(),
   HOST: z.string().min(1).default('0.0.0.0'),
   PORT: z.coerce.number().int().positive().default(3000),
   WIKIPEDIA_API_URL: z.url().default('https://en.wikipedia.org/w/api.php'),

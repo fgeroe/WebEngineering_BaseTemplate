@@ -7,6 +7,7 @@ services:
       PORT: 3000
       WIKIPEDIA_API_URL: ${WIKIPEDIA_API_URL:-https://en.wikipedia.org/w/api.php}
       WIKIPEDIA_TIMEOUT_MS: ${WIKIPEDIA_TIMEOUT_MS:-5000}
+      ENABLE_DEBUG_ROUTES: ${ENABLE_DEBUG_ROUTES:-false}
     ports:
       - '3000:3000'
 
