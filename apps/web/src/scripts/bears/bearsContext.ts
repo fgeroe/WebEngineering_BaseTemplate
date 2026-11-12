@@ -1,9 +1,9 @@
 import { createContext, useContext } from 'react';
-import type { BearWithImage } from './types';
+import type { Bear } from './types';
 
 export type BearsState =
   | { status: 'loading' }
-  | { status: 'success'; bears: BearWithImage[] }
+  | { status: 'success'; bears: Bear[] }
   | { status: 'empty' }
   | { status: 'error'; message: string };
 

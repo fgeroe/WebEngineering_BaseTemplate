@@ -1,13 +1,17 @@
 import { buildApp } from './app.js';
+import { createBearService } from './bears/bearService.js';
+import { createWikipediaClient } from './bears/wikipediaClient.js';
+import { loadConfig } from './config.js';
 
-const host = process.env.HOST ?? '0.0.0.0';
-const port = Number(process.env.PORT ?? 3000);
+const config = loadConfig();
 
-if (!Number.isInteger(port) || port <= 0) {
-  throw new Error(`Invalid PORT "${process.env.PORT}"`);
-}
+const wikipedia = createWikipediaClient({
+  apiUrl: config.WIKIPEDIA_API_URL,
+  timeoutMs: config.WIKIPEDIA_TIMEOUT_MS,
+  userAgent: config.WIKIPEDIA_USER_AGENT,
+});
 
-const app = buildApp({ logger: true });
+const app = buildApp({ bears: createBearService(wikipedia) }, { logger: true });
 
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {
   process.once(signal, () => {
@@ -17,7 +21,7 @@ for (const signal of ['SIGINT', 'SIGTERM'] as const) {
 }
 
 try {
-  await app.listen({ host, port });
+  await app.listen({ host: config.HOST, port: config.PORT });
 } catch (err) {
   app.log.error(err);
   process.exit(1);

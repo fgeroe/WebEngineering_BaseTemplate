@@ -1,8 +1,7 @@
-import type { CSSProperties, JSX } from 'react';
-import type { ImageResult } from './types';
+import { useState, type CSSProperties, type JSX } from 'react';
 
 interface BearImageProps {
-  result: ImageResult;
+  imageUrl: string | null;
   name: string;
 }
 
@@ -15,12 +14,27 @@ const placeholderStyle: CSSProperties = {
   color: '#666',
 };
 
-function BearImage({ result, name }: BearImageProps): JSX.Element {
-  if (result.ok) {
-    return <img src={result.url} alt={`Image of ${name}`} style={imageStyle} />;
+function BearImage({ imageUrl, name }: BearImageProps): JSX.Element {
+  const [failedUrl, setFailedUrl] = useState<string | null>(null);
+
+  if (imageUrl === null) {
+    return <div style={placeholderStyle}>No image found</div>;
   }
 
-  return <div style={placeholderStyle}>{result.reason}</div>;
+  if (imageUrl === failedUrl) {
+    return <div style={placeholderStyle}>Not possible to load image</div>;
+  }
+
+  return (
+    <img
+      src={imageUrl}
+      alt={`Image of ${name}`}
+      style={imageStyle}
+      onError={() => {
+        setFailedUrl(imageUrl);
+      }}
+    />
+  );
 }
 
 export default BearImage;
