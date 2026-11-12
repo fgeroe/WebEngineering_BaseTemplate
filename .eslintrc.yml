@@ -1,20 +1,33 @@
 root: true
 env:
-  browser: true
   es2022: true
 parserOptions:
-  project: ./tsconfig.json
-settings:
-  react:
-    version: detect
+  project:
+    - ./apps/web/tsconfig.json
+    - ./apps/api/tsconfig.json
 extends:
   - standard-with-typescript
   - plugin:@typescript-eslint/recommended
-  - plugin:react/recommended
-  - plugin:react/jsx-runtime
-  - plugin:react-hooks/recommended
   - plugin:prettier/recommended
   - prettier
+overrides:
+  - files:
+      - apps/web/**/*.{ts,tsx}
+    env:
+      browser: true
+    settings:
+      react:
+        version: detect
+    extends:
+      - plugin:react/recommended
+      - plugin:react/jsx-runtime
+      - plugin:react-hooks/recommended
+      - plugin:prettier/recommended
+      - prettier
+  - files:
+      - apps/api/**/*.ts
+    env:
+      node: true
 ignorePatterns:
   - dist
   - node_modules
