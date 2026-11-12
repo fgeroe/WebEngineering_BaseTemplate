@@ -1,4 +1,5 @@
 import { useState, type JSX } from 'react';
+import { describeError } from '../api';
 import CommentForm from './CommentForm';
 import CommentList from './CommentList';
 import { useComments } from './useComments';
@@ -17,9 +18,7 @@ function CommentSection({ bearId }: CommentSectionProps): JSX.Element {
     try {
       await removeComment(commentId);
     } catch (err) {
-      setDeleteError(
-        `Not possible to delete comment: ${err instanceof Error ? err.message : String(err)}`
-      );
+      setDeleteError(`Not possible to delete comment: ${describeError(err)}`);
     }
   }
 

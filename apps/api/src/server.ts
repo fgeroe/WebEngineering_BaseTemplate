@@ -19,7 +19,14 @@ const comments = createCommentService({
   comments: createInMemoryCommentRepository(),
 });
 
-const app = buildApp({ bears, comments }, { logger: true });
+const app = buildApp(
+  {
+    bears,
+    comments,
+    debugRoutes: config.ENABLE_DEBUG_ROUTES ?? config.NODE_ENV !== 'production',
+  },
+  { logger: true }
+);
 
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {
   process.once(signal, () => {
