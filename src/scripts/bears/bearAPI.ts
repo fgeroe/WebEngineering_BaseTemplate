@@ -1,4 +1,4 @@
-import { getElement } from './dom';
+import type { Bear, BearWithImage, ImageResult } from './types';
 
 const baseUrl = 'https://en.wikipedia.org/w/api.php';
 const title = 'List_of_ursids';
@@ -12,18 +12,7 @@ const params: Record<string, string> = {
   origin: '*',
 };
 
-interface Bear {
-  name: string;
-  binomial: string;
-  file: string | null;
-  range: string;
-}
-
-type ImageResult = { ok: true; url: string } | { ok: false; reason: string };
-
-interface BearWithImage extends Bear {
-  imageResult: ImageResult;
-}
+// ---------- Validation of API data ----------
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
@@ -46,7 +35,7 @@ function getRecord(
 function getArray(obj: Record<string, unknown>, key: string): unknown[] {
   const value = obj[key];
   if (!Array.isArray(value)) {
-    throw new Error(`"${key}" is not an Array`);
+    throw new Error(`"${key}" is not an array`);
   }
   return value;
 }
@@ -54,37 +43,42 @@ function getArray(obj: Record<string, unknown>, key: string): unknown[] {
 function getString(obj: Record<string, unknown>, key: string): string {
   const value = obj[key];
   if (typeof value !== 'string') {
-    throw new Error(`"${key}" is not a String`);
+    throw new Error(`"${key}" is not a string`);
   }
   return value;
 }
 
 function extractWikitext(data: unknown): string {
-  const response = asRecord(data, 'Antwort');
+  const response = asRecord(data, 'response');
   const parse = getRecord(response, 'parse');
   const wikitext = getRecord(parse, 'wikitext');
   return getString(wikitext, '*');
 }
 
 function extractImageUrl(data: unknown): string {
-  const response = asRecord(data, 'Antwort');
+  const response = asRecord(data, 'response');
   const query = getRecord(response, 'query');
   const pages = getRecord(query, 'pages');
-  const page = asRecord(Object.values(pages)[0], 'Seite');
+  const page = asRecord(Object.values(pages)[0], 'page');
   const imageinfo = getArray(page, 'imageinfo');
-  const firstInfo = asRecord(imageinfo[0], 'Bildinfo');
+  const firstInfo = asRecord(imageinfo[0], 'image info');
   return getString(firstInfo, 'url');
 }
 
-async function fetchJson(url: string): Promise<unknown> {
-  const res = await fetch(url);
+// ---------- Network ----------
+
+async function fetchJson(url: string, signal: AbortSignal): Promise<unknown> {
+  const res = await fetch(url, { signal });
   if (!res.ok) {
     throw new Error('Server responded with ' + res.status);
   }
   return await res.json();
 }
 
-async function fetchImageUrl(fileName: string): Promise<string> {
+async function fetchImageUrl(
+  fileName: string,
+  signal: AbortSignal
+): Promise<string> {
   const imageParams: Record<string, string> = {
     action: 'query',
     titles: 'File:' + fileName,
@@ -95,7 +89,7 @@ async function fetchImageUrl(fileName: string): Promise<string> {
   };
 
   const url = baseUrl + '?' + new URLSearchParams(imageParams).toString();
-  const data = await fetchJson(url);
+  const data = await fetchJson(url, signal);
   return extractImageUrl(data);
 }
 
@@ -112,13 +106,16 @@ async function canLoadImage(url: string): Promise<boolean> {
   });
 }
 
-async function resolveImage(bear: Bear): Promise<ImageResult> {
+async function resolveImage(
+  bear: Bear,
+  signal: AbortSignal
+): Promise<ImageResult> {
   if (bear.file === null) {
     return { ok: false, reason: 'No image found' };
   }
 
   try {
-    const url = await fetchImageUrl(bear.file);
+    const url = await fetchImageUrl(bear.file, signal);
     const loadable = await canLoadImage(url);
 
     if (!loadable) {
@@ -126,9 +123,20 @@ async function resolveImage(bear: Bear): Promise<ImageResult> {
     }
     return { ok: true, url };
   } catch (err) {
+    // Re-throw aborted requests instead of treating them as image errors
+    if (signal.aborted) throw err;
     console.error(bear.name + ':', err);
     return { ok: false, reason: 'Error while loading image' };
   }
+}
+
+// ---------- Parsing the wikitext ----------
+
+function toSlug(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
 }
 
 function matchField(row: string, field: string): string {
@@ -153,10 +161,6 @@ function extractBears(wikitext: string): Bear[] {
     .split('{{Species table/end}}')
     .flatMap((table) => table.split('{{Species table/row').slice(1));
 
-  if (rows.length === 0) {
-    throw new Error('No species table available');
-  }
-
   const bears: Bear[] = [];
   rows.forEach((row) => {
     const nameField = matchField(row, 'name');
@@ -164,11 +168,12 @@ function extractBears(wikitext: string): Bear[] {
     const name = nameMatch?.[1]?.trim();
     if (name === undefined || name === '') return;
 
+    const binomial = matchField(row, 'binomial');
     const image = matchField(row, 'image');
     const range = matchField(row, 'range');
-    const binomial = matchField(row, 'binomial');
 
     bears.push({
+      id: toSlug(binomial !== '' ? binomial : name),
       name,
       binomial: binomial !== '' ? binomial : 'Unknown',
       file: image !== '' ? image.replace('File:', '') : null,
@@ -176,78 +181,23 @@ function extractBears(wikitext: string): Bear[] {
     });
   });
 
-  if (bears.length === 0) {
-    throw new Error('No bears found in table');
-  }
-
   return bears;
 }
 
-function showError(message: string): void {
-  const section = document.querySelector('.more_bears');
-  if (section === null) return;
-  const p = document.createElement('p');
-  p.style.color = '#c33';
-  p.textContent = message;
-  section.appendChild(p);
-}
+// ---------- Public entry point ----------
 
-function renderBears(bears: BearWithImage[]): void {
-  const section = getElement('.more_bears', HTMLElement);
+export async function fetchBears(
+  signal: AbortSignal
+): Promise<BearWithImage[]> {
+  const url = baseUrl + '?' + new URLSearchParams(params).toString();
+  const data = await fetchJson(url, signal);
+  const wikitext = extractWikitext(data);
+  const bears = extractBears(wikitext);
 
-  bears.forEach((bear) => {
-    const div = document.createElement('div');
-    div.className = 'bear';
-
-    if (bear.imageResult.ok) {
-      const img = document.createElement('img');
-      img.src = bear.imageResult.url;
-      img.alt = 'Image of ' + bear.name;
-      img.style.width = '200px';
-      img.style.height = 'auto';
-      div.appendChild(img);
-    } else {
-      const placeholder = document.createElement('div');
-      placeholder.textContent = bear.imageResult.reason;
-      placeholder.style.width = '200px';
-      placeholder.style.height = '120px';
-      placeholder.style.border = '2px dashed #999';
-      placeholder.style.color = '#666';
-      div.appendChild(placeholder);
-    }
-
-    const namePara = document.createElement('p');
-    const nameBold = document.createElement('b');
-    nameBold.textContent = bear.name;
-    namePara.append(nameBold, ' (' + bear.binomial + ')');
-    div.appendChild(namePara);
-
-    const rangePara = document.createElement('p');
-    rangePara.textContent = 'Range: ' + bear.range;
-    div.appendChild(rangePara);
-
-    section.appendChild(div);
-  });
-}
-
-export async function loadBears(): Promise<void> {
-  try {
-    const url = baseUrl + '?' + new URLSearchParams(params).toString();
-    const data = await fetchJson(url);
-    const wikitext = extractWikitext(data);
-    const bears = extractBears(wikitext);
-
-    const results: BearWithImage[] = await Promise.all(
-      bears.map(async (bear) => ({
-        ...bear,
-        imageResult: await resolveImage(bear),
-      }))
-    );
-
-    renderBears(results);
-  } catch (err) {
-    console.error('loadBears:', err);
-    const message = err instanceof Error ? err.message : String(err);
-    showError('Not possible to load list of bears: ' + message);
-  }
+  return await Promise.all(
+    bears.map(async (bear) => ({
+      ...bear,
+      imageResult: await resolveImage(bear, signal),
+    }))
+  );
 }
