@@ -1,9 +1,9 @@
 import type { JSX } from 'react';
 import BearCard from './BearCard';
-import type { BearWithImage } from './types';
+import type { Bear } from './types';
 
 interface BearListProps {
-  bears: BearWithImage[];
+  bears: Bear[];
 }
 
 function BearList({ bears }: BearListProps): JSX.Element {

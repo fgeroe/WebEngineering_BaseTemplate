@@ -1,49 +1,27 @@
 import { readFileSync } from 'node:fs';
-import type { FastifyPluginAsync } from 'fastify';
+import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
+import { z } from 'zod';
 
-interface HealthResponse {
-  status: 'ok';
-  version: string;
-  uptime: number;
-}
+const packageJsonSchema = z.object({ version: z.string() });
 
-function readVersion(): string {
-  const raw: unknown = JSON.parse(
+const healthResponseSchema = z.object({
+  status: z.literal('ok'),
+  version: z.string(),
+  uptime: z.number(),
+});
+
+const { version } = packageJsonSchema.parse(
+  JSON.parse(
     readFileSync(new URL('../../package.json', import.meta.url), 'utf8')
-  );
-  if (
-    typeof raw !== 'object' ||
-    raw === null ||
-    !('version' in raw) ||
-    typeof raw.version !== 'string'
-  ) {
-    throw new Error('package.json does not contain a version string');
-  }
-  return raw.version;
-}
+  )
+);
 
-const version = readVersion();
-
-export const healthRoutes: FastifyPluginAsync = async (app) => {
-  app.get<{ Reply: HealthResponse }>(
+export const healthRoutes: FastifyPluginAsyncZod = async (app) => {
+  app.get(
     '/health',
-    {
-      schema: {
-        response: {
-          200: {
-            type: 'object',
-            required: ['status', 'version', 'uptime'],
-            properties: {
-              status: { type: 'string', enum: ['ok'] },
-              version: { type: 'string' },
-              uptime: { type: 'number' },
-            },
-          },
-        },
-      },
-    },
+    { schema: { response: { 200: healthResponseSchema } } },
     async () => ({
-      status: 'ok',
+      status: 'ok' as const,
       version,
       uptime: process.uptime(),
     })

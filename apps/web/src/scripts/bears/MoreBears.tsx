@@ -1,10 +1,10 @@
 import type { JSX } from 'react';
 import BearList from './BearList';
 import { useBears } from './bearsContext';
-import type { BearWithImage } from './types';
+import type { Bear } from './types';
 import HighlightedText from '../search/HighlightedText';
 
-function matchesFilter(bear: BearWithImage, filter: string): boolean {
+function matchesFilter(bear: Bear, filter: string): boolean {
   const needle = filter.toLowerCase();
   return [bear.name, bear.binomial, bear.range].some((value) =>
     value.toLowerCase().includes(needle)

@@ -37,7 +37,7 @@ function BearDetailPage(): JSX.Element {
           <h1>
             <HighlightedText>{bear.name}</HighlightedText>
           </h1>
-          <BearImage result={bear.imageResult} name={bear.name} />
+          <BearImage imageUrl={bear.imageUrl} name={bear.name} />
           <p>
             Scientific name: <HighlightedText>{bear.binomial}</HighlightedText>
           </p>

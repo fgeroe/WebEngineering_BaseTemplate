@@ -1,17 +1,17 @@
 import type { JSX } from 'react';
 import { Link } from 'react-router';
 import BearImage from './BearImage';
-import type { BearWithImage } from './types';
+import type { Bear } from './types';
 import HighlightedText from '../search/HighlightedText';
 
 interface BearCardProps {
-  bear: BearWithImage;
+  bear: Bear;
 }
 
 function BearCard({ bear }: BearCardProps): JSX.Element {
   return (
     <div className="bear">
-      <BearImage result={bear.imageResult} name={bear.name} />
+      <BearImage imageUrl={bear.imageUrl} name={bear.name} />
       <p>
         <b>
           <Link to={`/bears/${bear.id}`}>

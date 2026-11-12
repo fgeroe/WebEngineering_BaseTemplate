@@ -1,14 +1,13 @@
-export interface Bear {
-  id: string;
-  name: string;
-  binomial: string;
-  file: string | null;
-  range: string;
-}
+import { z } from 'zod';
 
-export type ImageResult =
-  { ok: true; url: string } | { ok: false; reason: string };
+export const bearSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  binomial: z.string().min(1),
+  imageUrl: z.url().nullable(),
+  range: z.string(),
+});
 
-export interface BearWithImage extends Bear {
-  imageResult: ImageResult;
-}
+export const bearListSchema = z.array(bearSchema);
+
+export type Bear = z.infer<typeof bearSchema>;
