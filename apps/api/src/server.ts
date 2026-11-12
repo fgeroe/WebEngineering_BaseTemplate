@@ -23,6 +23,7 @@ const app = buildApp(
   {
     bears,
     comments,
+    corsOrigins: config.CORS_ORIGINS,
     debugRoutes: config.ENABLE_DEBUG_ROUTES ?? config.NODE_ENV !== 'production',
   },
   { logger: true }
