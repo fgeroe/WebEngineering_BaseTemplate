@@ -2,6 +2,7 @@ import type { JSX } from 'react';
 import { Link, useParams } from 'react-router';
 import BearImage from './BearImage';
 import { useBears } from './bearsContext';
+import CommentSection from '../comments/CommentSection';
 import HighlightedText from '../search/HighlightedText';
 
 function BearDetailPage(): JSX.Element {
@@ -46,6 +47,8 @@ function BearDetailPage(): JSX.Element {
           </p>
         </article>
       )}
+
+      {bear !== undefined && <CommentSection key={bear.id} bearId={bear.id} />}
     </main>
   );
 }

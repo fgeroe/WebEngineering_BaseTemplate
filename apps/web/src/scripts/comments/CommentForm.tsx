@@ -1,28 +1,43 @@
 import { useState, type SubmitEvent, type JSX } from 'react';
-import type { CommentEntry } from './types';
+import { commentLimits, type NewComment } from './types';
 
 interface CommentFormProps {
-  onAddComment: (comment: CommentEntry) => void;
+  onAddComment: (comment: NewComment) => Promise<void>;
 }
 
 function CommentForm({ onAddComment }: CommentFormProps): JSX.Element {
-  const [name, setName] = useState('');
+  const [author, setAuthor] = useState('');
   const [text, setText] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function submit(comment: NewComment): Promise<void> {
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      await onAddComment(comment);
+      setAuthor('');
+      setText('');
+    } catch (err) {
+      setError(
+        `Not possible to save comment: ${err instanceof Error ? err.message : String(err)}`
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
 
   function handleSubmit(event: SubmitEvent<HTMLFormElement>): void {
     event.preventDefault();
 
-    const trimmedName = name.trim();
+    const trimmedAuthor = author.trim();
     const trimmedText = text.trim();
-    if (trimmedName === '' || trimmedText === '') return;
+    if (trimmedAuthor === '' || trimmedText === '') {
+      setError('Please enter your name and a comment.');
+      return;
+    }
 
-    onAddComment({
-      id: crypto.randomUUID(),
-      name: trimmedName,
-      text: trimmedText,
-    });
-    setName('');
-    setText('');
+    void submit({ author: trimmedAuthor, text: trimmedText });
   }
 
   return (
@@ -34,9 +49,10 @@ function CommentForm({ onAddComment }: CommentFormProps): JSX.Element {
           name="name"
           id="name"
           placeholder="Enter your name"
-          value={name}
+          maxLength={commentLimits.authorMaxLength}
+          value={author}
           onChange={(event) => {
-            setName(event.target.value);
+            setAuthor(event.target.value);
           }}
         />
       </div>
@@ -47,14 +63,24 @@ function CommentForm({ onAddComment }: CommentFormProps): JSX.Element {
           id="comment"
           rows={3}
           placeholder="Enter your comment"
+          maxLength={commentLimits.textMaxLength}
           value={text}
           onChange={(event) => {
             setText(event.target.value);
           }}
         />
       </div>
+      {error !== null && (
+        <p role="alert" style={{ color: '#c33' }}>
+          {error}
+        </p>
+      )}
       <div>
-        <input type="submit" value="Submit comment" />
+        <input
+          type="submit"
+          value={isSubmitting ? 'Saving…' : 'Submit comment'}
+          disabled={isSubmitting}
+        />
       </div>
     </form>
   );

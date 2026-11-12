@@ -1,22 +1,26 @@
 import { useState, type JSX } from 'react';
 import CommentForm from './CommentForm';
 import CommentList from './CommentList';
-import type { CommentEntry } from './types';
+import { useComments } from './useComments';
 
-const initialComments: CommentEntry[] = [
-  {
-    id: 'bob-fossil',
-    name: 'Bob Fossil',
-    text: 'Oh I am so glad you taught me all about the big brown angry guys...',
-  },
-];
+interface CommentSectionProps {
+  bearId: string;
+}
 
-function CommentSection(): JSX.Element {
+function CommentSection({ bearId }: CommentSectionProps): JSX.Element {
   const [isVisible, setIsVisible] = useState(false);
-  const [comments, setComments] = useState<CommentEntry[]>(initialComments);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const { state, addComment, removeComment } = useComments(bearId);
 
-  function addComment(comment: CommentEntry): void {
-    setComments((previous) => [...previous, comment]);
+  async function handleDelete(commentId: string): Promise<void> {
+    setDeleteError(null);
+    try {
+      await removeComment(commentId);
+    } catch (err) {
+      setDeleteError(
+        `Not possible to delete comment: ${err instanceof Error ? err.message : String(err)}`
+      );
+    }
   }
 
   return (
@@ -37,7 +41,33 @@ function CommentSection(): JSX.Element {
         <CommentForm onAddComment={addComment} />
 
         <h4>Comments</h4>
-        <CommentList comments={comments} />
+
+        {state.status === 'loading' && <p>Loading comments…</p>}
+
+        {state.status === 'error' && (
+          <p role="alert" style={{ color: '#c33' }}>
+            Not possible to load comments: {state.message}
+          </p>
+        )}
+
+        {deleteError !== null && (
+          <p role="alert" style={{ color: '#c33' }}>
+            {deleteError}
+          </p>
+        )}
+
+        {state.status === 'success' && state.comments.length === 0 && (
+          <p>No comments yet.</p>
+        )}
+
+        {state.status === 'success' && (
+          <CommentList
+            comments={state.comments}
+            onDelete={(commentId) => {
+              void handleDelete(commentId);
+            }}
+          />
+        )}
       </div>
     </section>
   );
