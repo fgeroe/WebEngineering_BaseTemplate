@@ -7,6 +7,8 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
+    "build:cross-origin": "tsc && vite build --mode cross-origin",
+    "preview:cross-origin": "npm run build:cross-origin && vite preview",
     "typecheck": "tsc"
   },
   "dependencies": {

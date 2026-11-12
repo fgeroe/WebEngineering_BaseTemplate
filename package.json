@@ -9,6 +9,7 @@
   ],
   "scripts": {
     "dev": "concurrently --names web,api --prefix-colors blue,green \"wait-on --timeout 30000 http-get://127.0.0.1:3000/health && npm run dev -w apps/web\" \"npm run dev -w apps/api\"",
+    "preview:cross-origin": "npm run preview:cross-origin -w apps/web",
     "build": "npm run build --workspaces",
     "typecheck": "npm run typecheck --workspaces",
     "lint": "eslint apps --ext .js,.jsx,.ts,.tsx --max-warnings 0",

@@ -13,6 +13,8 @@ const problemSchema = z.object({
     .optional(),
 });
 
+const apiBaseUrl = (import.meta.env.VITE_API_URL ?? '').replace(/\/+$/, '');
+
 export type ProblemFieldError = NonNullable<
   z.infer<typeof problemSchema>['errors']
 >[number];
@@ -63,7 +65,7 @@ async function send(url: string, init: RequestInit): Promise<Response> {
   const headers = new Headers(init.headers);
   headers.set('Accept', 'application/json, application/problem+json');
 
-  const response = await fetch(url, { ...init, headers });
+  const response = await fetch(apiBaseUrl + url, { ...init, headers });
   if (!response.ok) {
     throw await toApiError(response);
   }

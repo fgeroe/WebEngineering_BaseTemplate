@@ -8,6 +8,8 @@ import {
 } from 'fastify-type-provider-zod';
 import type { BearService } from './bears/bearService.js';
 import type { CommentService } from './comments/commentService.js';
+import { setupCors } from './cors.js';
+import { setupDocs } from './docs.js';
 import { setupErrorHandling } from './errorHandler.js';
 import { generateRequestId, setupRequestId } from './requestId.js';
 import { bearRoutes } from './routes/bears.js';
@@ -18,11 +20,17 @@ import { healthRoutes } from './routes/health.js';
 export interface AppOptions {
   bears: BearService;
   comments: CommentService;
+  corsOrigins?: string[];
   debugRoutes?: boolean;
 }
 
 export function buildApp(
-  { bears, comments, debugRoutes: enableDebugRoutes = false }: AppOptions,
+  {
+    bears,
+    comments,
+    corsOrigins = [],
+    debugRoutes: enableDebugRoutes = false,
+  }: AppOptions,
   fastifyOptions: FastifyServerOptions = {}
 ): FastifyInstance {
   const app = Fastify({
@@ -36,6 +44,8 @@ export function buildApp(
   app.setSerializerCompiler(serializerCompiler);
   setupRequestId(app);
   setupErrorHandling(app);
+  setupCors(app, corsOrigins);
+  setupDocs(app);
 
   void app.register(healthRoutes);
   void app.register(bearRoutes, { bears });

@@ -5,6 +5,25 @@ const configSchema = z.object({
     .enum(['development', 'production', 'test'])
     .default('development'),
   ENABLE_DEBUG_ROUTES: z.stringbool().optional(),
+  CORS_ORIGINS: z
+    .string()
+    .default('')
+    .transform((value) =>
+      value
+        .split(',')
+        .map((origin) => origin.trim())
+        .filter((origin) => origin !== '')
+    )
+    .pipe(
+      z.array(
+        z
+          .url()
+          .refine(
+            (origin) => new URL(origin).origin === origin,
+            'Must be an origin like http://localhost:4173 without path or trailing slash'
+          )
+      )
+    ),
   HOST: z.string().min(1).default('0.0.0.0'),
   PORT: z.coerce.number().int().positive().default(3000),
   WIKIPEDIA_API_URL: z.url().default('https://en.wikipedia.org/w/api.php'),
