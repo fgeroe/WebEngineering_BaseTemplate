@@ -4,17 +4,29 @@ import HighlightedText from '../search/HighlightedText';
 
 interface CommentItemProps {
   comment: CommentEntry;
+  onDelete: (commentId: string) => void;
 }
 
-function CommentItem({ comment }: CommentItemProps): JSX.Element {
+function CommentItem({ comment, onDelete }: CommentItemProps): JSX.Element {
   return (
     <li>
       <p>
-        <HighlightedText>{comment.name}</HighlightedText>
+        <HighlightedText>{comment.author}</HighlightedText>{' '}
+        <time dateTime={comment.createdAt}>
+          {new Date(comment.createdAt).toLocaleString()}
+        </time>
       </p>
       <p>
         <HighlightedText>{comment.text}</HighlightedText>
       </p>
+      <button
+        type="button"
+        onClick={() => {
+          onDelete(comment.id);
+        }}
+      >
+        Delete comment
+      </button>
     </li>
   );
 }

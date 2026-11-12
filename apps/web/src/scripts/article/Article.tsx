@@ -4,7 +4,6 @@ import bearOgg from '../../media/bear.ogg';
 import urbanBear from '../../media/urban-bear.jpg';
 import wildBear from '../../media/wild-bear.jpg';
 import MoreBears from '../bears/MoreBears';
-import CommentSection from '../comments/CommentSection';
 import AuthorBio from './AuthorBio';
 import BearTypesTable from './BearTypesTable';
 import { bearTypes } from './bearTypes';
@@ -76,8 +75,6 @@ function Article(): JSX.Element {
       </audio>
 
       <AuthorBio />
-
-      <CommentSection />
 
       <MoreBears />
     </article>

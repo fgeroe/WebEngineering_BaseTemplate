@@ -1,6 +1,8 @@
 import { buildApp } from './app.js';
 import { createBearService } from './bears/bearService.js';
 import { createWikipediaClient } from './bears/wikipediaClient.js';
+import { createInMemoryCommentRepository } from './comments/commentRepository.js';
+import { createCommentService } from './comments/commentService.js';
 import { loadConfig } from './config.js';
 
 const config = loadConfig();
@@ -11,7 +13,13 @@ const wikipedia = createWikipediaClient({
   userAgent: config.WIKIPEDIA_USER_AGENT,
 });
 
-const app = buildApp({ bears: createBearService(wikipedia) }, { logger: true });
+const bears = createBearService(wikipedia);
+const comments = createCommentService({
+  bears,
+  comments: createInMemoryCommentRepository(),
+});
+
+const app = buildApp({ bears, comments }, { logger: true });
 
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {
   process.once(signal, () => {

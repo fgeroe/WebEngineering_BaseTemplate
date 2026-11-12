@@ -8,7 +8,7 @@
     "apps/api"
   ],
   "scripts": {
-    "dev": "concurrently --names web,api --prefix-colors blue,green \"npm run dev -w apps/web\" \"npm run dev -w apps/api\"",
+    "dev": "concurrently --names web,api --prefix-colors blue,green \"wait-on --timeout 30000 http-get://127.0.0.1:3000/health && npm run dev -w apps/web\" \"npm run dev -w apps/api\"",
     "build": "npm run build --workspaces",
     "typecheck": "npm run typecheck --workspaces",
     "lint": "eslint apps --ext .js,.jsx,.ts,.tsx --max-warnings 0",
@@ -44,7 +44,8 @@
     "husky": "^9.1.7",
     "lint-staged": "^17.6.0",
     "prettier": "^3.9.9",
-    "typescript": "5.9"
+    "typescript": "5.9",
+    "wait-on": "^9.5.1"
   },
   "lint-staged": {
     "apps/*/{src/**/*,*}.{js,jsx,ts,tsx}": [
