@@ -34,6 +34,12 @@ const configSchema = z.object({
     .default(
       'WebEngineeringBearsBFF/1.0 (https://github.com/fgeroe/WebEngineering_BaseTemplate)'
     ),
+  DATABASE_URL: z.url({
+    protocol: /^postgres(ql)?$/,
+    error: 'Must be a postgres:// connection string',
+  }),
+  DB_POOL_MAX: z.coerce.number().int().min(1).max(100).default(10),
+  DB_CONNECTION_TIMEOUT_MS: z.coerce.number().int().positive().default(2000),
 });
 
 export type Config = z.infer<typeof configSchema>;

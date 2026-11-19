@@ -32,6 +32,7 @@ jobs:
       - name: Smoke test
         run: |
           curl --fail --include http://localhost:3000/health
+          curl --fail --include http://localhost:3000/health/ready
           curl --fail --silent --output /dev/null http://localhost:8080/
 
       - name: Show logs
