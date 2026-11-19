@@ -1,9 +1,9 @@
 import { buildApp } from './app.js';
-import { createBearService } from './bears/bearService.js';
-import { createWikipediaClient } from './bears/wikipediaClient.js';
+import { createDatabaseBearService } from './bears/databaseBearService.js';
 import { createInMemoryCommentRepository } from './comments/commentRepository.js';
 import { createCommentService } from './comments/commentService.js';
 import { loadConfig } from './config.js';
+import { createDatabase } from './db/client.js';
 import { createPool, pingDatabase } from './db/pool.js';
 
 const config = loadConfig();
@@ -14,13 +14,9 @@ const pool = createPool({
   connectionTimeoutMs: config.DB_CONNECTION_TIMEOUT_MS,
 });
 
-const wikipedia = createWikipediaClient({
-  apiUrl: config.WIKIPEDIA_API_URL,
-  timeoutMs: config.WIKIPEDIA_TIMEOUT_MS,
-  userAgent: config.WIKIPEDIA_USER_AGENT,
-});
+const db = createDatabase(pool);
 
-const bears = createBearService(wikipedia);
+const bears = createDatabaseBearService(db);
 const comments = createCommentService({
   bears,
   comments: createInMemoryCommentRepository(),

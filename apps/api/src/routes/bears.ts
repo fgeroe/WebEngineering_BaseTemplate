@@ -1,6 +1,6 @@
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
-import { bearListSchema, bearSchema } from '../bears/bear.js';
+import { bearSchema } from '../bears/bear.js';
 import type { BearService } from '../bears/bearService.js';
 import { problemResponses } from '../problem.js';
 
@@ -16,11 +16,11 @@ export const bearRoutes: FastifyPluginAsyncZod<BearRoutesOptions> = async (
     '/api/bears',
     {
       schema: {
-        summary: 'List all bears from the Wikipedia list of ursids',
+        summary: 'List all bears (from the database)',
         tags: ['bears'],
         response: {
-          200: bearListSchema,
-          ...problemResponses(502, 504),
+          200: z.array(bearSchema),
+          ...problemResponses(),
         },
       },
     },
@@ -36,7 +36,7 @@ export const bearRoutes: FastifyPluginAsyncZod<BearRoutesOptions> = async (
         params: z.object({ id: z.string().min(1) }),
         response: {
           200: bearSchema,
-          ...problemResponses(400, 404, 502, 504),
+          ...problemResponses(400, 404),
         },
       },
     },
