@@ -12,6 +12,7 @@
     "preview:cross-origin": "npm run preview:cross-origin -w apps/web",
     "build": "npm run build --workspaces",
     "typecheck": "npm run typecheck --workspaces",
+    "test": "npm run test --workspaces --if-present",
     "lint": "eslint apps --ext .js,.jsx,.ts,.tsx --max-warnings 0",
     "lint:fix": "eslint apps --ext .js,.jsx,.ts,.tsx --fix",
     "format": "prettier --write \"apps/*/src/**/*.{js,jsx,ts,tsx}\" \"apps/*/*.ts\"",
