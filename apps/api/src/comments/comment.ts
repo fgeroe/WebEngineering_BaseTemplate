@@ -24,3 +24,15 @@ export const newCommentSchema = z
 
 export type Comment = z.infer<typeof commentSchema>;
 export type NewComment = z.infer<typeof newCommentSchema>;
+
+export const commentPageSchema = z
+  .object({
+    items: z.array(commentSchema),
+    nextCursor: z
+      .string()
+      .nullable()
+      .describe('Send as ?cursor= to get the next page; null on the last page'),
+  })
+  .meta({ id: 'CommentPage' });
+
+export type CommentPage = z.infer<typeof commentPageSchema>;

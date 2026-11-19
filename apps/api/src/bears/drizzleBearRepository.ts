@@ -1,4 +1,4 @@
-import { asc, eq } from 'drizzle-orm';
+import { asc, eq, ilike } from 'drizzle-orm';
 import type { Database } from '../db/client.js';
 import { bears } from '../db/schema.js';
 import type { BearRepository } from './bearRepository.js';
@@ -11,10 +11,22 @@ const bearColumns = {
   range: bears.range,
 };
 
+function escapeLike(text: string): string {
+  return text.replace(/[\\%_]/g, '\\$&');
+}
+
 export function createDrizzleBearRepository(db: Database): BearRepository {
   return {
-    list: async () =>
-      await db.select(bearColumns).from(bears).orderBy(asc(bears.position)),
+    list: async ({ nameContains } = {}) =>
+      await db
+        .select(bearColumns)
+        .from(bears)
+        .where(
+          nameContains === undefined
+            ? undefined
+            : ilike(bears.name, `%${escapeLike(nameContains)}%`)
+        )
+        .orderBy(asc(bears.position)),
 
     findById: async (id) => {
       const [bear] = await db

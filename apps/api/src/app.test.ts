@@ -4,6 +4,7 @@ import { buildApp } from './app.js';
 import type { Bear } from './bears/bear.js';
 import { createInMemoryBearRepository } from './bears/bearRepository.js';
 import { createBearService } from './bears/bearService.js';
+import type { CommentPage } from './comments/comment.js';
 import { createInMemoryCommentRepository } from './comments/commentRepository.js';
 import { createCommentService } from './comments/commentService.js';
 
@@ -60,6 +61,17 @@ describe('bears', () => {
     ]);
   });
 
+  it('filters the bears by name with ?q=', async () => {
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/bears?q=POLAR',
+    });
+
+    expect(response.json<Bear[]>().map((bear) => bear.id)).toEqual([
+      'ursus-maritimus',
+    ]);
+  });
+
   it('answers 404 as Problem Details for an unknown bear', async () => {
     const response = await app.inject({
       method: 'GET',
@@ -88,7 +100,7 @@ describe('comments', () => {
       method: 'GET',
       url: '/api/bears/ursus-arctos/comments',
     });
-    expect(listed.json<unknown[]>()).toHaveLength(1);
+    expect(listed.json<CommentPage>().items).toHaveLength(1);
 
     const deleted = await app.inject({
       method: 'DELETE',
@@ -101,6 +113,44 @@ describe('comments', () => {
       url: `/api/comments/${id}`,
     });
     expect(deletedAgain.statusCode).toBe(404);
+  });
+
+  it('pages through all comments with the cursor', async () => {
+    for (let i = 1; i <= 5; i++) {
+      await app.inject({
+        method: 'POST',
+        url: '/api/bears/ursus-arctos/comments',
+        payload: { author: 'Anna', text: `Comment ${i}` },
+      });
+    }
+
+    const seen: string[] = [];
+    let cursor: string | null = null;
+    let pages = 0;
+    do {
+      const query: string = cursor === null ? '' : `&cursor=${cursor}`;
+      const response = await app.inject({
+        method: 'GET',
+        url: `/api/bears/ursus-arctos/comments?limit=2${query}`,
+      });
+      const page = response.json<CommentPage>();
+      seen.push(...page.items.map((item) => item.id));
+      cursor = page.nextCursor;
+      pages++;
+    } while (cursor !== null);
+
+    expect(pages).toBe(3);
+    expect(seen).toHaveLength(5);
+    expect(new Set(seen).size).toBe(5);
+  });
+
+  it('rejects an invalid cursor with 400', async () => {
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/bears/ursus-arctos/comments?cursor=garbage',
+    });
+
+    expect(response.statusCode).toBe(400);
   });
 
   it('rejects an empty comment with 400', async () => {

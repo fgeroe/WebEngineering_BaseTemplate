@@ -3,13 +3,14 @@ import type { Bear } from './bear.js';
 import type { BearRepository } from './bearRepository.js';
 
 export interface BearService {
-  listBears: () => Promise<Bear[]>;
+  listBears: (query?: string) => Promise<Bear[]>;
   getBear: (id: string) => Promise<Bear>;
 }
 
 export function createBearService(repository: BearRepository): BearService {
-  async function listBears(): Promise<Bear[]> {
-    return await repository.list();
+  async function listBears(query?: string): Promise<Bear[]> {
+    const nameContains = query?.trim() ?? '';
+    return await repository.list(nameContains === '' ? {} : { nameContains });
   }
 
   async function getBear(id: string): Promise<Bear> {

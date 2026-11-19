@@ -7,15 +7,31 @@ function comment(id: string, bearId: string, createdAt: string): Comment {
 }
 
 describe('in-memory comment repository', () => {
-  it('lists the comments of one bear, oldest first', async () => {
+  it('lists the comments of one bear, newest first', async () => {
     const repository = createInMemoryCommentRepository();
     await repository.insert(comment('b', 'bear-1', '2026-01-02T00:00:00.000Z'));
     await repository.insert(comment('a', 'bear-1', '2026-01-01T00:00:00.000Z'));
     await repository.insert(comment('c', 'bear-2', '2026-01-01T00:00:00.000Z'));
 
-    const result = await repository.listByBear('bear-1');
+    const result = await repository.listByBear('bear-1', { limit: 10 });
 
-    expect(result.map((entry) => entry.id)).toEqual(['a', 'b']);
+    expect(result.map((entry) => entry.id)).toEqual(['b', 'a']);
+  });
+
+  it('continues after the cursor position (keyset pagination)', async () => {
+    const repository = createInMemoryCommentRepository();
+    await repository.insert(comment('a', 'bear-1', '2026-01-01T00:00:00.000Z'));
+    await repository.insert(comment('b', 'bear-1', '2026-01-02T00:00:00.000Z'));
+    await repository.insert(comment('c', 'bear-1', '2026-01-03T00:00:00.000Z'));
+
+    const firstPage = await repository.listByBear('bear-1', { limit: 2 });
+    const secondPage = await repository.listByBear('bear-1', {
+      limit: 2,
+      after: { createdAt: '2026-01-02T00:00:00.000Z', id: 'b' },
+    });
+
+    expect(firstPage.map((entry) => entry.id)).toEqual(['c', 'b']);
+    expect(secondPage.map((entry) => entry.id)).toEqual(['a']);
   });
 
   it('loads the comments of many bears in one call (no N+1)', async () => {
@@ -34,7 +50,7 @@ describe('in-memory comment repository', () => {
     const repository = createInMemoryCommentRepository();
     await repository.insert(comment('a', 'bear-1', '2026-01-01T00:00:00.000Z'));
 
-    const [first] = await repository.listByBear('bear-1');
+    const [first] = await repository.listByBear('bear-1', { limit: 10 });
     if (first !== undefined) first.text = 'changed';
 
     const stored = await repository.findById('a');
