@@ -29,9 +29,15 @@ export const comments = pgTable(
       .references(() => bears.id, { onDelete: 'cascade' }),
     author: varchar('author', { length: 50 }).notNull(),
     text: varchar('text', { length: 1000 }).notNull(),
-    createdAt: timestamp('created_at', { withTimezone: true })
+    createdAt: timestamp('created_at', { withTimezone: true, precision: 3 })
       .notNull()
       .defaultNow(),
   },
-  (table) => [index('comments_bear_id_idx').on(table.bearId)]
+  (table) => [
+    index('comments_bear_id_created_at_id_idx').on(
+      table.bearId,
+      table.createdAt,
+      table.id
+    ),
+  ]
 );

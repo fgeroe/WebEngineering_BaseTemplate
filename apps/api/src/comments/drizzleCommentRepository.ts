@@ -1,4 +1,4 @@
-import { asc, eq, inArray } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
 import type { Database } from '../db/client.js';
 import { comments } from '../db/schema.js';
 import type { Comment } from './comment.js';
@@ -20,18 +20,25 @@ export function createDrizzleCommentRepository(
   db: Database
 ): CommentRepository {
   return {
-    listByBear: async (bearId) => {
+    listByBear: async (bearId, { limit, after }) => {
       const rows = await db
         .select()
         .from(comments)
-        .where(eq(comments.bearId, bearId))
-        .orderBy(asc(comments.createdAt), asc(comments.id));
+        .where(
+          and(
+            eq(comments.bearId, bearId),
+            after === undefined
+              ? undefined
+              : sql`(${comments.createdAt}, ${comments.id}) < (${after.createdAt}::timestamptz, ${after.id}::uuid)`
+          )
+        )
+        .orderBy(desc(comments.createdAt), desc(comments.id))
+        .limit(limit);
       return rows.map(toComment);
     },
 
     listByBears: async (bearIds) => {
       if (bearIds.length === 0) return new Map();
-      // one query for all bears: WHERE bear_id IN (...)
       const rows = await db
         .select()
         .from(comments)

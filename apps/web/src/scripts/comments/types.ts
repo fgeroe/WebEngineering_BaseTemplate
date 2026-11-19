@@ -13,7 +13,12 @@ export const commentSchema = z.object({
   createdAt: z.iso.datetime(),
 });
 
-export const commentListSchema = z.array(commentSchema);
+export const commentPageSchema = z.object({
+  items: z.array(commentSchema),
+  nextCursor: z.string().nullable(),
+});
+
+export type CommentPage = z.infer<typeof commentPageSchema>;
 
 export type CommentEntry = z.infer<typeof commentSchema>;
 

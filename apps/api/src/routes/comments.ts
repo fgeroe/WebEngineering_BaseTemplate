@@ -1,6 +1,10 @@
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
-import { commentSchema, newCommentSchema } from '../comments/comment.js';
+import {
+  commentPageSchema,
+  commentSchema,
+  newCommentSchema,
+} from '../comments/comment.js';
 import type { CommentService } from '../comments/commentService.js';
 import { problemResponses } from '../problem.js';
 
@@ -10,6 +14,10 @@ export interface CommentRoutesOptions {
 
 const bearParamsSchema = z.object({ id: z.string().min(1) });
 const commentParamsSchema = z.object({ commentId: z.uuid() });
+const commentPageQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  cursor: z.string().min(1).optional(),
+});
 
 export const commentRoutes: FastifyPluginAsyncZod<
   CommentRoutesOptions
@@ -18,16 +26,18 @@ export const commentRoutes: FastifyPluginAsyncZod<
     '/api/bears/:id/comments',
     {
       schema: {
-        summary: 'List the comments of a bear',
+        summary: 'List the comments of a bear, newest first, page by page',
         tags: ['comments'],
         params: bearParamsSchema,
+        querystring: commentPageQuerySchema,
         response: {
-          200: z.array(commentSchema),
-          ...problemResponses(400, 404, 502, 504),
+          200: commentPageSchema,
+          ...problemResponses(400, 404),
         },
       },
     },
-    async (request) => await comments.listComments(request.params.id)
+    async (request) =>
+      await comments.listComments(request.params.id, request.query)
   );
 
   app.post(

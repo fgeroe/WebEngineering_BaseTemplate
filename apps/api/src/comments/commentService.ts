@@ -1,11 +1,20 @@
 import { randomUUID } from 'node:crypto';
 import type { BearService } from '../bears/bearService.js';
 import { NotFoundError } from '../errors.js';
-import type { Comment, NewComment } from './comment.js';
+import type { Comment, CommentPage, NewComment } from './comment.js';
+import { decodeCursor, encodeCursor } from './commentCursor.js';
 import type { CommentRepository } from './commentRepository.js';
 
+export interface CommentPageQuery {
+  limit: number;
+  cursor?: string;
+}
+
 export interface CommentService {
-  listComments: (bearId: string) => Promise<Comment[]>;
+  listComments: (
+    bearId: string,
+    query: CommentPageQuery
+  ) => Promise<CommentPage>;
   getComment: (id: string) => Promise<Comment>;
   addComment: (bearId: string, input: NewComment) => Promise<Comment>;
   deleteComment: (id: string) => Promise<void>;
@@ -24,9 +33,21 @@ export function createCommentService({
   now = () => new Date(),
   generateId = randomUUID,
 }: CommentServiceDependencies): CommentService {
-  async function listComments(bearId: string): Promise<Comment[]> {
+  async function listComments(
+    bearId: string,
+    { limit, cursor }: CommentPageQuery
+  ): Promise<CommentPage> {
+    const after = cursor === undefined ? undefined : decodeCursor(cursor);
     await bears.getBear(bearId);
-    return await comments.listByBear(bearId);
+
+    const rows = await comments.listByBear(bearId, { limit: limit + 1, after });
+    const items = rows.slice(0, limit);
+    const last = items.at(-1);
+    return {
+      items,
+      nextCursor:
+        rows.length > limit && last !== undefined ? encodeCursor(last) : null,
+    };
   }
 
   async function getComment(id: string): Promise<Comment> {

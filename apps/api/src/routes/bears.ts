@@ -18,13 +18,20 @@ export const bearRoutes: FastifyPluginAsyncZod<BearRoutesOptions> = async (
       schema: {
         summary: 'List all bears (from the database)',
         tags: ['bears'],
+        querystring: z.object({
+          q: z
+            .string()
+            .max(100)
+            .optional()
+            .describe('Only bears whose name contains this text'),
+        }),
         response: {
           200: z.array(bearSchema),
           ...problemResponses(),
         },
       },
     },
-    async () => await bears.listBears()
+    async (request) => await bears.listBears(request.query.q)
   );
 
   app.get(

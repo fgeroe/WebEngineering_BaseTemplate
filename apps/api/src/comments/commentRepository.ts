@@ -1,7 +1,13 @@
 import type { Comment } from './comment.js';
+import type { CommentCursor } from './commentCursor.js';
+
+export interface CommentPageRequest {
+  limit: number;
+  after?: CommentCursor;
+}
 
 export interface CommentRepository {
-  listByBear: (bearId: string) => Promise<Comment[]>;
+  listByBear: (bearId: string, page: CommentPageRequest) => Promise<Comment[]>;
   listByBears: (bearIds: string[]) => Promise<Map<string, Comment[]>>;
   findById: (id: string) => Promise<Comment | undefined>;
   insert: (comment: Comment) => Promise<void>;
@@ -11,6 +17,11 @@ export interface CommentRepository {
 function byCreation(a: Comment, b: Comment): number {
   const byTime = a.createdAt.localeCompare(b.createdAt);
   return byTime !== 0 ? byTime : a.id.localeCompare(b.id);
+}
+
+// same rule as the SQL row comparison (created_at, id) < (cursor)
+function isAfter(comment: Comment, cursor: CommentCursor): boolean {
+  return byCreation(comment, { ...comment, ...cursor }) < 0;
 }
 
 export function groupByBear(
@@ -35,7 +46,11 @@ export function createInMemoryCommentRepository(): CommentRepository {
   }
 
   return {
-    listByBear: async (bearId) => copies(new Set([bearId])),
+    listByBear: async (bearId, { limit, after }) =>
+      copies(new Set([bearId]))
+        .reverse()
+        .filter((comment) => after === undefined || isAfter(comment, after))
+        .slice(0, limit),
 
     listByBears: async (bearIds) =>
       groupByBear(bearIds, copies(new Set(bearIds))),
