@@ -8,7 +8,7 @@
     "apps/api"
   ],
   "scripts": {
-    "dev": "npm run db:up && concurrently --names web,api --prefix-colors blue,green \"wait-on --timeout 30000 http-get://127.0.0.1:3000/health && npm run dev -w apps/web\" \"npm run dev -w apps/api\"",
+    "dev": "npm run db:up && npm run db:migrate && npm run db:seed -- --if-empty && concurrently --names web,api --prefix-colors blue,green \"wait-on --timeout 30000 http-get://127.0.0.1:3000/health && npm run dev -w apps/web\" \"npm run dev -w apps/api\"",
     "preview:cross-origin": "npm run preview:cross-origin -w apps/web",
     "build": "npm run build --workspaces",
     "typecheck": "npm run typecheck --workspaces",
@@ -18,7 +18,10 @@
     "format:check": "prettier --check \"apps/*/src/**/*.{js,jsx,ts,tsx}\" \"apps/*/*.ts\"",
     "prepare": "husky",
     "db:up": "docker compose up --detach --wait db",
-    "db:down": "docker compose stop db"
+    "db:down": "docker compose stop db",
+    "db:generate": "npm run db:generate -w apps/api --",
+    "db:migrate": "npm run db:migrate -w apps/api --",
+    "db:seed": "npm run db:seed -w apps/api --"
   },
   "repository": {
     "type": "git",
