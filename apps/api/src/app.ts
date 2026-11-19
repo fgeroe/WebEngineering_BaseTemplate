@@ -20,6 +20,7 @@ import { healthRoutes } from './routes/health.js';
 export interface AppOptions {
   bears: BearService;
   comments: CommentService;
+  checkDatabase: () => Promise<void>;
   corsOrigins?: string[];
   debugRoutes?: boolean;
 }
@@ -28,6 +29,7 @@ export function buildApp(
   {
     bears,
     comments,
+    checkDatabase,
     corsOrigins = [],
     debugRoutes: enableDebugRoutes = false,
   }: AppOptions,
@@ -47,7 +49,7 @@ export function buildApp(
   setupCors(app, corsOrigins);
   setupDocs(app);
 
-  void app.register(healthRoutes);
+  void app.register(healthRoutes, { checkDatabase });
   void app.register(bearRoutes, { bears });
   void app.register(commentRoutes, { comments });
   if (enableDebugRoutes) {
