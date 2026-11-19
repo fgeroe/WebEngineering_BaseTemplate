@@ -9,7 +9,7 @@ export interface CommentRoutesOptions {
 }
 
 const bearParamsSchema = z.object({ id: z.string().min(1) });
-const commentParamsSchema = z.object({ commentId: z.string().min(1) });
+const commentParamsSchema = z.object({ commentId: z.uuid() });
 
 export const commentRoutes: FastifyPluginAsyncZod<
   CommentRoutesOptions

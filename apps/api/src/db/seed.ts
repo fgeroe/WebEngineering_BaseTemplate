@@ -1,5 +1,5 @@
 import { count, sql, type Column } from 'drizzle-orm';
-import { createBearService } from '../bears/bearService.js';
+import { fetchBearsFromWikipedia } from '../bears/wikipediaBears.js';
 import { createWikipediaClient } from '../bears/wikipediaClient.js';
 import { loadConfig } from '../config.js';
 import { UpstreamError } from '../errors.js';
@@ -37,7 +37,7 @@ async function seed(): Promise<void> {
     timeoutMs: config.WIKIPEDIA_TIMEOUT_MS,
     userAgent: config.WIKIPEDIA_USER_AGENT,
   });
-  const fetched = await createBearService(wikipedia).listBears();
+  const fetched = await fetchBearsFromWikipedia(wikipedia);
   const fetchedAt = new Date();
 
   await db
