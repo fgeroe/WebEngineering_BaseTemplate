@@ -23,6 +23,7 @@ export function setupDocs(app: FastifyInstance): void {
         { name: 'health', description: 'Service status' },
         { name: 'bears', description: 'Bears from Wikipedia' },
         { name: 'comments', description: 'Comments on bears' },
+        { name: 'auth', description: 'Registration and login' },
       ],
     },
     transform: jsonSchemaTransform,

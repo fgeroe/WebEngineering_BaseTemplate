@@ -12,14 +12,17 @@ import { setupCors } from './cors.js';
 import { setupDocs } from './docs.js';
 import { setupErrorHandling } from './errorHandler.js';
 import { generateRequestId, setupRequestId } from './requestId.js';
+import { authRoutes } from './routes/auth.js';
 import { bearRoutes } from './routes/bears.js';
 import { commentRoutes } from './routes/comments.js';
 import { debugRoutes } from './routes/debug.js';
 import { healthRoutes } from './routes/health.js';
+import type { UserService } from './users/userService.js';
 
 export interface AppOptions {
   bears: BearService;
   comments: CommentService;
+  users: UserService;
   checkDatabase: () => Promise<void>;
   corsOrigins?: string[];
   debugRoutes?: boolean;
@@ -29,6 +32,7 @@ export function buildApp(
   {
     bears,
     comments,
+    users,
     checkDatabase,
     corsOrigins = [],
     debugRoutes: enableDebugRoutes = false,
@@ -52,6 +56,7 @@ export function buildApp(
   void app.register(healthRoutes, { checkDatabase });
   void app.register(bearRoutes, { bears });
   void app.register(commentRoutes, { comments });
+  void app.register(authRoutes, { users });
   if (enableDebugRoutes) {
     void app.register(debugRoutes);
   }

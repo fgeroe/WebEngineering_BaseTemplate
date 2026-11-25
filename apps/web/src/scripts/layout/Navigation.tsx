@@ -33,6 +33,13 @@ function Navigation({ searchTerm, onSearch }: NavigationProps): JSX.Element {
       </ul>
 
       <Search key={searchTerm} initialQuery={searchTerm} onSearch={onSearch} />
+
+      {/* account actions live apart from the content links */}
+      <div className="account">
+        <NavLink to="/register" className="account-link">
+          Register
+        </NavLink>
+      </div>
     </nav>
   );
 }

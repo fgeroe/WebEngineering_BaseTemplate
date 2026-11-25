@@ -1,6 +1,7 @@
 import type { JSX } from 'react';
 import { Link, Route, Routes, useSearchParams } from 'react-router';
 import Article from './article/Article';
+import RegisterPage from './auth/RegisterPage';
 import BearDetailPage from './bears/BearDetailPage';
 import BearListPage from './bears/BearListPage';
 import BearsProvider from './bears/BearsProvider';
@@ -35,6 +36,7 @@ function App(): JSX.Element {
           />
           <Route path="/bears" element={<BearListPage />} />
           <Route path="/bears/:bearId" element={<BearDetailPage />} />
+          <Route path="/register" element={<RegisterPage />} />
           <Route
             path="*"
             element={
