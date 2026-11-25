@@ -20,10 +20,18 @@ export interface UseCommentsResult {
   loadMore: () => Promise<void>;
 }
 
-export function useComments(bearId: string): UseCommentsResult {
+/**
+ * viewerKey changes when someone logs in or out, so the comments (and their
+ * canDelete flags) are loaded again; null = login state not known yet.
+ */
+export function useComments(
+  bearId: string,
+  viewerKey: string | null
+): UseCommentsResult {
   const [state, setState] = useState<CommentsState>({ status: 'loading' });
 
   useEffect(() => {
+    if (viewerKey === null) return;
     const controller = new AbortController();
 
     async function load(): Promise<void> {
@@ -48,7 +56,7 @@ export function useComments(bearId: string): UseCommentsResult {
     return () => {
       controller.abort();
     };
-  }, [bearId]);
+  }, [bearId, viewerKey]);
 
   async function loadMore(): Promise<void> {
     if (state.status !== 'success' || state.nextCursor === null) return;

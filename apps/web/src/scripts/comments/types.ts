@@ -11,6 +11,7 @@ export const commentSchema = z.object({
   author: z.string(),
   text: z.string(),
   createdAt: z.iso.datetime(),
+  canDelete: z.boolean(),
 });
 
 export const commentPageSchema = z.object({

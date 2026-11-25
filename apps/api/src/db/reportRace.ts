@@ -15,23 +15,17 @@ const pool = createPool({
   connectionTimeoutMs: config.DB_CONNECTION_TIMEOUT_MS,
 });
 
-async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const response = await fetch(apiUrl + path, init);
-  if (!response.ok) {
-    throw new Error(`${init.method ?? 'GET'} ${path} -> ${response.status}`);
-  }
-  return (await response.json()) as T;
-}
-
 try {
-  // a fresh comment, so every run starts at report_count = 0
-  const [bear] = await api<Array<{ id: string }>>('/api/bears');
-  if (bear === undefined) throw new Error('No bears. Run npm run db:seed.');
-  const comment = await api<{ id: string }>(`/api/bears/${bear.id}/comments`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ author: 'Race test', text: 'Report me' }),
-  });
+  // a fresh comment, so every run starts at report_count = 0. Written
+  // directly into the database: creating comments via the API needs a login
+  // since Playground 6
+  const { rows: created } = await pool.query<{ id: string }>(
+    `INSERT INTO comments (bear_id, author, text)
+     SELECT id, 'Race test', 'Report me' FROM bears ORDER BY position LIMIT 1
+     RETURNING id`
+  );
+  const comment = created[0];
+  if (comment === undefined) throw new Error('No bears. Run npm run db:seed.');
 
   console.log(
     `Sending ${reports} concurrent reports for comment ${comment.id}`

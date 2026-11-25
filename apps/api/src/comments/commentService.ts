@@ -1,14 +1,17 @@
 import { randomUUID } from 'node:crypto';
 import type { BearService } from '../bears/bearService.js';
-import { NotFoundError } from '../errors.js';
+import { ForbiddenError, NotFoundError } from '../errors.js';
+import type { User } from '../users/user.js';
 import type {
   Comment,
   CommentPage,
   CommentReport,
+  CommentView,
   NewComment,
   ReportState,
 } from './comment.js';
 import { decodeCursor, encodeCursor } from './commentCursor.js';
+import { canDeleteComment } from './commentPolicy.js';
 import type {
   CommentRepository,
   CommentTransaction,
@@ -28,11 +31,16 @@ export interface CommentPageQuery {
 export interface CommentService {
   listComments: (
     bearId: string,
-    query: CommentPageQuery
+    query: CommentPageQuery,
+    viewer: User | null
   ) => Promise<CommentPage>;
-  getComment: (id: string) => Promise<Comment>;
-  addComment: (bearId: string, input: NewComment) => Promise<Comment>;
-  deleteComment: (id: string) => Promise<void>;
+  getComment: (id: string, viewer: User | null) => Promise<CommentView>;
+  addComment: (
+    bearId: string,
+    input: NewComment,
+    author: User
+  ) => Promise<CommentView>;
+  deleteComment: (id: string, actor: User) => Promise<void>;
   reportComment: (id: string) => Promise<CommentReport>;
 }
 
@@ -53,9 +61,18 @@ export function createCommentService({
   now = () => new Date(),
   generateId = randomUUID,
 }: CommentServiceDependencies): CommentService {
+  // the API never exposes authorId, only what the viewer may do
+  function toView(
+    { authorId, ...comment }: Comment,
+    viewer: User | null
+  ): CommentView {
+    return { ...comment, canDelete: canDeleteComment(viewer, { authorId }) };
+  }
+
   async function listComments(
     bearId: string,
-    { limit, cursor }: CommentPageQuery
+    { limit, cursor }: CommentPageQuery,
+    viewer: User | null
   ): Promise<CommentPage> {
     const after = cursor === undefined ? undefined : decodeCursor(cursor);
     await bears.getBear(bearId);
@@ -64,41 +81,52 @@ export function createCommentService({
     const items = rows.slice(0, limit);
     const last = items.at(-1);
     return {
-      items,
+      items: items.map((comment) => toView(comment, viewer)),
       nextCursor:
         rows.length > limit && last !== undefined ? encodeCursor(last) : null,
     };
   }
 
-  async function getComment(id: string): Promise<Comment> {
+  async function getComment(
+    id: string,
+    viewer: User | null
+  ): Promise<CommentView> {
     const comment = await comments.findById(id);
     if (comment === undefined) {
       throw new NotFoundError(`No comment with id "${id}"`);
     }
-    return comment;
+    return toView(comment, viewer);
   }
 
   async function addComment(
     bearId: string,
-    input: NewComment
-  ): Promise<Comment> {
+    input: NewComment,
+    author: User
+  ): Promise<CommentView> {
     await bears.getBear(bearId);
     const comment: Comment = {
       id: generateId(),
       bearId,
+      authorId: author.id,
       author: input.author,
       text: input.text,
       createdAt: now().toISOString(),
     };
     await comments.insert(comment);
-    return comment;
+    return toView(comment, author);
   }
 
-  async function deleteComment(id: string): Promise<void> {
-    const deleted = await comments.delete(id);
-    if (!deleted) {
+  async function deleteComment(id: string, actor: User): Promise<void> {
+    const owner = await comments.findOwner(id);
+    if (owner === undefined) {
       throw new NotFoundError(`No comment with id "${id}"`);
     }
+    if (!canDeleteComment(actor, owner)) {
+      throw new ForbiddenError(
+        'Only the author or a moderator may delete this comment.'
+      );
+    }
+    await comments.delete(id);
   }
 
   function nextReportState(state: ReportState): ReportState {

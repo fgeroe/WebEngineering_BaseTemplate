@@ -1,5 +1,6 @@
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
+import { authenticatedUser, type AuthHooks } from '../auth/authHooks.js';
 import {
   commentPageSchema,
   commentReportSchema,
@@ -11,6 +12,7 @@ import { problemResponses } from '../problem.js';
 
 export interface CommentRoutesOptions {
   comments: CommentService;
+  hooks: AuthHooks;
 }
 
 const bearParamsSchema = z.object({ id: z.string().min(1) });
@@ -22,7 +24,7 @@ const commentPageQuerySchema = z.object({
 
 export const commentRoutes: FastifyPluginAsyncZod<
   CommentRoutesOptions
-> = async (app, { comments }) => {
+> = async (app, { comments, hooks }) => {
   app.get(
     '/api/bears/:id/comments',
     {
@@ -36,9 +38,15 @@ export const commentRoutes: FastifyPluginAsyncZod<
           ...problemResponses(400, 404),
         },
       },
+      // reading needs no login; the user only decides canDelete per comment
+      preHandler: hooks.loadUser,
     },
     async (request) =>
-      await comments.listComments(request.params.id, request.query)
+      await comments.listComments(
+        request.params.id,
+        request.query,
+        request.user
+      )
   );
 
   app.post(
@@ -51,14 +59,16 @@ export const commentRoutes: FastifyPluginAsyncZod<
         body: newCommentSchema,
         response: {
           201: commentSchema,
-          ...problemResponses(400, 404, 413, 415, 502, 504),
+          ...problemResponses(400, 401, 404, 413, 415),
         },
       },
+      preHandler: hooks.requireUser,
     },
     async (request, reply) => {
       const comment = await comments.addComment(
         request.params.id,
-        request.body
+        request.body,
+        authenticatedUser(request)
       );
       void reply.code(201).header('Location', `/api/comments/${comment.id}`);
       return comment;
@@ -77,25 +87,32 @@ export const commentRoutes: FastifyPluginAsyncZod<
           ...problemResponses(400, 404),
         },
       },
+      preHandler: hooks.loadUser,
     },
-    async (request) => await comments.getComment(request.params.commentId)
+    async (request) =>
+      await comments.getComment(request.params.commentId, request.user)
   );
 
   app.delete(
     '/api/comments/:commentId',
     {
       schema: {
-        summary: 'Delete a comment',
+        summary: 'Delete a comment (its author or a moderator)',
         tags: ['comments'],
         params: commentParamsSchema,
         response: {
           204: z.null().describe('Comment deleted'),
-          ...problemResponses(400, 404),
+          ...problemResponses(400, 401, 403, 404),
         },
       },
+      // authentication here (401); authorisation in canDeleteComment (403)
+      preHandler: hooks.requireUser,
     },
     async (request, reply) => {
-      await comments.deleteComment(request.params.commentId);
+      await comments.deleteComment(
+        request.params.commentId,
+        authenticatedUser(request)
+      );
       return await reply.code(204).send(null);
     }
   );

@@ -1,5 +1,7 @@
 import { useState, type JSX } from 'react';
+import { Link } from 'react-router';
 import { describeError } from '../api';
+import { useAuth } from '../auth/authContext';
 import CommentForm from './CommentForm';
 import CommentList from './CommentList';
 import { useComments } from './useComments';
@@ -13,7 +15,17 @@ function CommentSection({ bearId }: CommentSectionProps): JSX.Element {
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [loadMoreError, setLoadMoreError] = useState<string | null>(null);
-  const { state, addComment, removeComment, loadMore } = useComments(bearId);
+  const { state: auth } = useAuth();
+  const viewerKey =
+    auth.status === 'loading'
+      ? null
+      : auth.status === 'authenticated'
+        ? auth.user.id
+        : 'anonymous';
+  const { state, addComment, removeComment, loadMore } = useComments(
+    bearId,
+    viewerKey
+  );
 
   async function handleDelete(commentId: string): Promise<void> {
     setDeleteError(null);
@@ -53,7 +65,14 @@ function CommentSection({ bearId }: CommentSectionProps): JSX.Element {
 
       <div className="comment-wrapper" hidden={!isVisible}>
         <h4>Add comment</h4>
-        <CommentForm onAddComment={addComment} />
+        {auth.status === 'authenticated' ? (
+          <CommentForm onAddComment={addComment} />
+        ) : (
+          <p className="comment-login-hint">
+            Please <Link to="/login">log in</Link> or{' '}
+            <Link to="/register">create an account</Link> to write a comment.
+          </p>
+        )}
 
         <h4>Comments</h4>
 

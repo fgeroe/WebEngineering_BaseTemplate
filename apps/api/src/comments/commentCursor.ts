@@ -1,6 +1,5 @@
 import { z } from 'zod';
 import { ValidationError } from '../errors.js';
-import type { Comment } from './comment.js';
 
 export interface CommentCursor {
   createdAt: string;
@@ -9,7 +8,7 @@ export interface CommentCursor {
 
 const cursorSchema = z.object({ createdAt: z.iso.datetime(), id: z.uuid() });
 
-export function encodeCursor({ createdAt, id }: Comment): string {
+export function encodeCursor({ createdAt, id }: CommentCursor): string {
   return Buffer.from(JSON.stringify({ createdAt, id })).toString('base64url');
 }
 

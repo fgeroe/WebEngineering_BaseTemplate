@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import type { FastifyInstance, LightMyRequestResponse } from 'fastify';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { buildApp } from './app.js';
@@ -12,7 +13,10 @@ import {
   createInMemoryCommentTransaction,
 } from './comments/commentRepository.js';
 import { createCommentService } from './comments/commentService.js';
-import { createArgon2PasswordHasher } from './users/passwordHasher.js';
+import {
+  createArgon2PasswordHasher,
+  type PasswordHasher,
+} from './users/passwordHasher.js';
 import {
   createInMemoryUserRepository,
   type UserRepository,
@@ -41,6 +45,32 @@ const unknownCommentId = '00000000-0000-4000-8000-000000000000';
 let app: FastifyInstance;
 let databaseUp: boolean;
 let userRepository: UserRepository;
+let passwords: PasswordHasher;
+
+const testPassword = 'correct horse battery staple';
+
+/** Creates an account, logs in and returns the session cookie value. */
+async function loginAs(
+  email: string,
+  role: 'user' | 'moderator' = 'user'
+): Promise<string> {
+  // the API cannot create moderators, so the test writes one directly
+  await userRepository.insert({
+    id: randomUUID(),
+    email,
+    role,
+    passwordHash: await passwords.hash(testPassword),
+    createdAt: new Date().toISOString(),
+  });
+  const response = await app.inject({
+    method: 'POST',
+    url: '/api/auth/login',
+    payload: { email, password: testPassword },
+  });
+  const sid = response.cookies.find((cookie) => cookie.name === 'sid')?.value;
+  if (sid === undefined) throw new Error(`login as ${email} failed`);
+  return sid;
+}
 
 beforeEach(() => {
   databaseUp = true;
@@ -52,7 +82,7 @@ beforeEach(() => {
     transaction: createInMemoryCommentTransaction(commentRepository),
   });
   userRepository = createInMemoryUserRepository();
-  const passwords = createArgon2PasswordHasher();
+  passwords = createArgon2PasswordHasher();
   const users = createUserService({ users: userRepository, passwords });
   const auth = createAuthService({
     users: userRepository,
@@ -111,10 +141,17 @@ describe('bears', () => {
 });
 
 describe('comments', () => {
+  let anna: string;
+
+  beforeEach(async () => {
+    anna = await loginAs('anna@example.com');
+  });
+
   it('creates, lists and deletes a comment', async () => {
     const created = await app.inject({
       method: 'POST',
       url: '/api/bears/ursus-arctos/comments',
+      cookies: { sid: anna },
       payload: { author: 'Anna', text: 'Big bear!' },
     });
     expect(created.statusCode).toBe(201);
@@ -130,12 +167,14 @@ describe('comments', () => {
     const deleted = await app.inject({
       method: 'DELETE',
       url: `/api/comments/${id}`,
+      cookies: { sid: anna },
     });
     expect(deleted.statusCode).toBe(204);
 
     const deletedAgain = await app.inject({
       method: 'DELETE',
       url: `/api/comments/${id}`,
+      cookies: { sid: anna },
     });
     expect(deletedAgain.statusCode).toBe(404);
   });
@@ -145,6 +184,7 @@ describe('comments', () => {
       await app.inject({
         method: 'POST',
         url: '/api/bears/ursus-arctos/comments',
+        cookies: { sid: anna },
         payload: { author: 'Anna', text: `Comment ${i}` },
       });
     }
@@ -182,6 +222,7 @@ describe('comments', () => {
     const response = await app.inject({
       method: 'POST',
       url: '/api/bears/ursus-arctos/comments',
+      cookies: { sid: anna },
       payload: { author: ' ', text: '' },
     });
 
@@ -192,6 +233,7 @@ describe('comments', () => {
     const response = await app.inject({
       method: 'POST',
       url: '/api/bears/unknown/comments',
+      cookies: { sid: anna },
       payload: { author: 'Anna', text: 'Hello' },
     });
 
@@ -202,6 +244,7 @@ describe('comments', () => {
     const response = await app.inject({
       method: 'DELETE',
       url: '/api/comments/not-a-uuid',
+      cookies: { sid: anna },
     });
 
     expect(response.statusCode).toBe(400);
@@ -211,6 +254,7 @@ describe('comments', () => {
     const response = await app.inject({
       method: 'DELETE',
       url: `/api/comments/${unknownCommentId}`,
+      cookies: { sid: anna },
     });
 
     expect(response.statusCode).toBe(404);
@@ -218,10 +262,17 @@ describe('comments', () => {
 });
 
 describe('reports', () => {
+  let anna: string;
+
+  beforeEach(async () => {
+    anna = await loginAs('anna@example.com');
+  });
+
   it('hides a comment after the third report', async () => {
     const created = await app.inject({
       method: 'POST',
       url: '/api/bears/ursus-arctos/comments',
+      cookies: { sid: anna },
       payload: { author: 'Troll', text: 'Spam' },
     });
     const { id } = created.json<{ id: string }>();
@@ -256,6 +307,77 @@ describe('reports', () => {
     });
 
     expect(response.statusCode).toBe(404);
+  });
+});
+
+describe('authorisation for comments', () => {
+  let author: string;
+  let commentId: string;
+
+  async function deleteAs(sid?: string): Promise<number> {
+    const response = await app.inject({
+      method: 'DELETE',
+      url: `/api/comments/${commentId}`,
+      ...(sid === undefined ? {} : { cookies: { sid } }),
+    });
+    return response.statusCode;
+  }
+
+  async function canDeleteAs(sid?: string): Promise<boolean | undefined> {
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/bears/ursus-arctos/comments',
+      ...(sid === undefined ? {} : { cookies: { sid } }),
+    });
+    return response.json<CommentPage>().items[0]?.canDelete;
+  }
+
+  beforeEach(async () => {
+    author = await loginAs('author@example.com');
+    const created = await app.inject({
+      method: 'POST',
+      url: '/api/bears/ursus-arctos/comments',
+      cookies: { sid: author },
+      payload: { author: 'Author', text: 'My comment' },
+    });
+    commentId = created.json<{ id: string }>().id;
+  });
+
+  it('needs a login to write a comment (401)', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/bears/ursus-arctos/comments',
+      payload: { author: 'Anonymous', text: 'Hello' },
+    });
+
+    expect(response.statusCode).toBe(401);
+  });
+
+  it('DELETE as anonymous: 401', async () => {
+    expect(await deleteAs()).toBe(401);
+  });
+
+  it('DELETE as another user: 403', async () => {
+    expect(await deleteAs(await loginAs('other@example.com'))).toBe(403);
+  });
+
+  it('DELETE as the author: 204', async () => {
+    expect(await deleteAs(author)).toBe(204);
+  });
+
+  it('DELETE as a moderator: 204', async () => {
+    const moderator = await loginAs('mod@example.com', 'moderator');
+    expect(await deleteAs(moderator)).toBe(204);
+  });
+
+  it('tells each viewer whether they may delete (for the UI)', async () => {
+    const other = await loginAs('other@example.com');
+    const moderator = await loginAs('mod@example.com', 'moderator');
+
+    expect(await canDeleteAs()).toBe(false);
+    expect(await canDeleteAs(other)).toBe(false);
+    expect(await canDeleteAs(author)).toBe(true);
+    expect(await canDeleteAs(moderator)).toBe(true);
   });
 });
 
@@ -309,8 +431,8 @@ describe('registration', () => {
     );
   });
 
-  it('rejects passwords shorter than 12 characters', async () => {
-    const response = await register('anna@example.com', 'elevenchars');
+  it('rejects passwords shorter than 6 characters', async () => {
+    const response = await register('anna@example.com', 'five5');
 
     expect(response.statusCode).toBe(400);
   });

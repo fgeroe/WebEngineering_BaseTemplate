@@ -487,3 +487,14 @@ nav .search {
 nav .account {
   flex: none;
 }
+
+/* Comment section when nobody is logged in (Playground 6, Task 3) */
+
+.comment-login-hint {
+  margin: 0 3rem 3rem;
+}
+
+.comment-login-hint a {
+  color: #2a2a2a;
+  font-weight: bold;
+}
