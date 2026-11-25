@@ -28,6 +28,11 @@ export const comments = pgTable(
     bearId: text('bear_id')
       .notNull()
       .references(() => bears.id, { onDelete: 'cascade' }),
+    // who wrote it; NULL for comments from before logins existed (only
+    // moderators may delete those) and when the user account is deleted
+    authorId: uuid('author_id').references(() => users.id, {
+      onDelete: 'set null',
+    }),
     author: varchar('author', { length: 50 }).notNull(),
     text: varchar('text', { length: 1000 }).notNull(),
     createdAt: timestamp('created_at', { withTimezone: true, precision: 3 })
@@ -44,6 +49,7 @@ export const comments = pgTable(
       table.createdAt,
       table.id
     ),
+    index('comments_author_id_idx').on(table.authorId),
   ]
 );
 

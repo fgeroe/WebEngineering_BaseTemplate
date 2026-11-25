@@ -14,6 +14,7 @@ function toComment(row: CommentRow): Comment {
   return {
     id: row.id,
     bearId: row.bearId,
+    authorId: row.authorId,
     author: row.author,
     text: row.text,
     createdAt: row.createdAt.toISOString(),
@@ -79,6 +80,15 @@ export function createDrizzleCommentRepository(
         .where(eq(comments.id, id))
         .returning({ id: comments.id });
       return deleted.length > 0;
+    },
+
+    findOwner: async (id) => {
+      const [row] = await db
+        .select({ authorId: comments.authorId })
+        .from(comments)
+        .where(eq(comments.id, id))
+        .limit(1);
+      return row;
     },
 
     findReportState: async (id, { forUpdate = false } = {}) => {

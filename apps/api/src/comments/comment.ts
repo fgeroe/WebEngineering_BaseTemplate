@@ -5,6 +5,7 @@ export const commentLimits = {
   textMaxLength: 1000,
 } as const;
 
+/** A comment as the API returns it to one particular viewer. */
 export const commentSchema = z
   .object({
     id: z.uuid(),
@@ -12,6 +13,9 @@ export const commentSchema = z
     author: z.string().min(1).max(commentLimits.authorMaxLength),
     text: z.string().min(1).max(commentLimits.textMaxLength),
     createdAt: z.iso.datetime(),
+    canDelete: z
+      .boolean()
+      .describe('Whether the current user may delete this comment'),
   })
   .meta({ id: 'Comment' });
 
@@ -22,7 +26,18 @@ export const newCommentSchema = z
   })
   .meta({ id: 'NewComment' });
 
-export type Comment = z.infer<typeof commentSchema>;
+export type CommentView = z.infer<typeof commentSchema>;
+
+/** What is stored about a comment. */
+export interface Comment {
+  id: string;
+  bearId: string;
+  /** null: written before logins existed, or the account was deleted */
+  authorId: string | null;
+  author: string;
+  text: string;
+  createdAt: string;
+}
 export type NewComment = z.infer<typeof newCommentSchema>;
 
 export const commentPageSchema = z

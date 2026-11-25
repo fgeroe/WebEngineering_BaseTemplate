@@ -29,10 +29,16 @@ async function reportConcurrently(
     transaction: createInMemoryCommentTransaction(repository),
     reportStrategy: strategy,
   });
-  const comment = await service.addComment('ursus-arctos', {
-    author: 'Anna',
-    text: 'Hello',
-  });
+  const comment = await service.addComment(
+    'ursus-arctos',
+    { author: 'Anna', text: 'Hello' },
+    {
+      id: '11111111-1111-4111-8111-111111111111',
+      email: 'anna@example.com',
+      role: 'user',
+      createdAt: '2026-01-01T00:00:00.000Z',
+    }
+  );
 
   // all reports start at the same time, like 50 parallel HTTP requests
   await Promise.all(

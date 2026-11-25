@@ -16,6 +16,8 @@ export interface AuthService {
   login: (credentials: Credentials, oldToken?: string) => Promise<LoginResult>;
   logout: (token: string | undefined) => Promise<void>;
   currentUser: (token: string | undefined) => Promise<User>;
+  /** Like currentUser, but null instead of 401 when nobody is logged in. */
+  findUser: (token: string | undefined) => Promise<User | null>;
 }
 
 export interface AuthServiceDependencies {
@@ -84,16 +86,21 @@ export function createAuthService({
     if (token !== undefined) await sessions.delete(hashToken(token));
   }
 
-  async function currentUser(token: string | undefined): Promise<User> {
+  async function findUser(token: string | undefined): Promise<User | null> {
     const user =
       token === undefined
         ? undefined
         : await sessions.findUser(hashToken(token), now());
-    if (user === undefined) {
-      throw new UnauthorizedError('You are not logged in.');
-    }
-    return toUser(user);
+    return user === undefined ? null : toUser(user);
   }
 
-  return { login, logout, currentUser };
+  async function currentUser(token: string | undefined): Promise<User> {
+    const user = await findUser(token);
+    if (user === null) {
+      throw new UnauthorizedError('You are not logged in.');
+    }
+    return user;
+  }
+
+  return { login, logout, currentUser, findUser };
 }

@@ -3,7 +3,14 @@ import type { Comment } from './comment.js';
 import { createInMemoryCommentRepository } from './commentRepository.js';
 
 function comment(id: string, bearId: string, createdAt: string): Comment {
-  return { id, bearId, author: 'Anna', text: 'Hello', createdAt };
+  return {
+    id,
+    bearId,
+    authorId: null,
+    author: 'Anna',
+    text: 'Hello',
+    createdAt,
+  };
 }
 
 describe('in-memory comment repository', () => {

@@ -24,6 +24,12 @@ export class UnauthorizedError extends ApiError {
   readonly title = 'Unauthorized';
 }
 
+export class ForbiddenError extends ApiError {
+  readonly status = 403;
+  readonly type = '/problems/forbidden';
+  readonly title = 'Forbidden';
+}
+
 export class NotFoundError extends ApiError {
   readonly status = 404;
   readonly type = '/problems/not-found';

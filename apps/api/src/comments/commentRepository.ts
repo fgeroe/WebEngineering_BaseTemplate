@@ -19,6 +19,8 @@ export interface CommentRepository {
   findById: (id: string) => Promise<Comment | undefined>;
   insert: (comment: Comment) => Promise<void>;
   delete: (id: string) => Promise<boolean>;
+  /** Who wrote a comment (hidden or not), for the authorisation check. */
+  findOwner: (id: string) => Promise<CommentOwner | undefined>;
   /**
    * Report state of a comment, hidden or not. With forUpdate the row stays
    * locked (SELECT ... FOR UPDATE) until the surrounding transaction ends.
@@ -34,6 +36,10 @@ export interface CommentRepository {
  * Runs the work inside ONE transaction and hands it a repository bound to that
  * transaction: commit when the work succeeds, rollback when it throws.
  */
+export interface CommentOwner {
+  authorId: string | null;
+}
+
 export type CommentTransaction = <T>(
   work: (comments: CommentRepository) => Promise<T>
 ) => Promise<T>;
@@ -54,6 +60,7 @@ function toComment(stored: StoredComment): Comment {
   return {
     id: stored.id,
     bearId: stored.bearId,
+    authorId: stored.authorId,
     author: stored.author,
     text: stored.text,
     createdAt: stored.createdAt,
@@ -104,6 +111,11 @@ export function createInMemoryCommentRepository(): CommentRepository {
     },
 
     delete: async (id) => comments.delete(id),
+
+    findOwner: async (id) => {
+      const comment = comments.get(id);
+      return comment === undefined ? undefined : { authorId: comment.authorId };
+    },
 
     findReportState: async (id) => {
       const comment = comments.get(id);

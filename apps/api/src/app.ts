@@ -7,6 +7,7 @@ import {
   serializerCompiler,
   validatorCompiler,
 } from 'fastify-type-provider-zod';
+import { setupAuthHooks } from './auth/authHooks.js';
 import type { AuthService } from './auth/authService.js';
 import type { BearService } from './bears/bearService.js';
 import type { CommentService } from './comments/commentService.js';
@@ -59,10 +60,11 @@ export function buildApp(
   setupCors(app, corsOrigins);
   setupDocs(app);
   void app.register(fastifyCookie);
+  const hooks = setupAuthHooks(app, auth);
 
   void app.register(healthRoutes, { checkDatabase });
   void app.register(bearRoutes, { bears });
-  void app.register(commentRoutes, { comments });
+  void app.register(commentRoutes, { comments, hooks });
   void app.register(authRoutes, { users, auth, cookieSecure });
   if (enableDebugRoutes) {
     void app.register(debugRoutes);

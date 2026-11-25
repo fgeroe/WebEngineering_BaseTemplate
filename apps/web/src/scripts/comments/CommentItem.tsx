@@ -19,14 +19,18 @@ function CommentItem({ comment, onDelete }: CommentItemProps): JSX.Element {
       <p>
         <HighlightedText>{comment.text}</HighlightedText>
       </p>
-      <button
-        type="button"
-        onClick={() => {
-          onDelete(comment.id);
-        }}
-      >
-        Delete comment
-      </button>
+      {/* only shown where the server would allow it; the server still
+          checks every DELETE itself */}
+      {comment.canDelete && (
+        <button
+          type="button"
+          onClick={() => {
+            onDelete(comment.id);
+          }}
+        >
+          Delete comment
+        </button>
+      )}
     </li>
   );
 }
