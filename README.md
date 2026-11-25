@@ -498,3 +498,19 @@ index – that is why the API uses a cursor.
 - **Consequences (+):** instant logout, no signing key to manage, a small cookie (43 characters), nothing readable by JavaScript.
 - **Consequences (–):** one primary-key lookup per authenticated request; expired rows pile up and need a cleanup job (Playground 7).
 - **Libraries:** only `@fastify/cookie`. `@fastify/session` is not needed: the session logic is a few lines in `apps/api/src/auth/authService.ts` and fits the repository pattern from Playground 5.
+
+## Playground 6 – Setup and hardening (Task 4)
+
+**Setup on a fresh clone:** `cp .env.example .env` and choose your own `POSTGRES_PASSWORD` (use the same password in `DATABASE_URL`). `.env` is in `.gitignore`, so no password lives in git any more. After that, `docker compose up --build` and `npm run dev` work as before.
+
+| Measure                                                                                                    | Where                                         | How to check                                                          |
+| ---------------------------------------------------------------------------------------------------------- | --------------------------------------------- | --------------------------------------------------------------------- |
+| Rate limit on login and register: 5 requests per IP and minute (fixed window), then 429 with `Retry-After` | `@fastify/rate-limit`, `routes/auth.ts`       | `npm run security:brute-force`                                        |
+| Security headers (CSP, HSTS, `nosniff`, `X-Frame-Options`, `Referrer-Policy`, …)                           | `@fastify/helmet`, `app.ts`                   | `curl -I localhost:3000/api/bears`                                    |
+| Strict CORS with credentials: only the origins in `CORS_ORIGINS`, never `*`                                | `cors.ts`, `config.ts`                        | a preflight from another origin gets no `Access-Control-Allow-Origin` |
+| Request body limit of 16 KiB, then 413                                                                     | `BODY_LIMIT_BYTES`, `app.ts`                  |                                                                       |
+| zod on every input: params, query, body, session cookie, environment                                       | routes, `auth/sessionCookie.ts`, `config.ts`  |                                                                       |
+| Secrets only from the environment; `.env.example` is committed, `.env` never                               | `.env.example`, `compose.yaml`                |                                                                       |
+| Secret scan with gitleaks                                                                                  | `.github/workflows/ci.yml`, job `secret-scan` | runs on every push and pull request                                   |
+
+Known limit: the rate limit counts per client IP. Behind the nginx container all clients share one IP; a production setup would configure Fastify's `trustProxy` for exactly that proxy.

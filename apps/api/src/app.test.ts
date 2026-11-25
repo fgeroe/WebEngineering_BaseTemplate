@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { FastifyInstance, LightMyRequestResponse } from 'fastify';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { buildApp } from './app.js';
+import { buildApp, type AppOptions } from './app.js';
 import { createAuthService } from './auth/authService.js';
 import { createInMemorySessionRepository } from './auth/sessionRepository.js';
 import type { Bear } from './bears/bear.js';
@@ -43,6 +43,7 @@ const testBears: Bear[] = [
 const unknownCommentId = '00000000-0000-4000-8000-000000000000';
 
 let app: FastifyInstance;
+let appOptions: AppOptions;
 let databaseUp: boolean;
 let userRepository: UserRepository;
 let passwords: PasswordHasher;
@@ -90,7 +91,7 @@ beforeEach(() => {
     passwords,
     sessionMaxAgeSeconds: 3600,
   });
-  app = buildApp({
+  appOptions = {
     bears,
     comments,
     users,
@@ -98,7 +99,8 @@ beforeEach(() => {
     checkDatabase: async () => {
       if (!databaseUp) throw new Error('database down');
     },
-  });
+  };
+  app = buildApp(appOptions);
 });
 
 afterEach(async () => {
@@ -530,6 +532,81 @@ describe('login and session', () => {
     expect(logout.statusCode).toBe(204);
     // even if someone kept a copy of the old cookie, it no longer works
     expect((await me(sid)).statusCode).toBe(401);
+  });
+});
+
+describe('hardening', () => {
+  it('answers 429 with Retry-After after 5 login attempts per window', async () => {
+    const statuses: number[] = [];
+    let last: LightMyRequestResponse | undefined;
+    for (let attempt = 1; attempt <= 6; attempt++) {
+      last = await app.inject({
+        method: 'POST',
+        url: '/api/auth/login',
+        payload: { email: 'victim@example.com', password: `guess ${attempt}` },
+      });
+      statuses.push(last.statusCode);
+    }
+
+    expect(statuses).toEqual([401, 401, 401, 401, 401, 429]);
+    expect(last?.headers['retry-after']).toBeDefined();
+    expect(last?.headers['content-type']).toContain('application/problem+json');
+  });
+
+  it('sends security headers', async () => {
+    const response = await app.inject({ method: 'GET', url: '/api/bears' });
+
+    expect(response.headers['x-content-type-options']).toBe('nosniff');
+    expect(response.headers['x-frame-options']).toBe('SAMEORIGIN');
+    expect(response.headers['strict-transport-security']).toBeDefined();
+    expect(response.headers['content-security-policy']).toBeDefined();
+  });
+
+  it('rejects a request body above the limit with 413', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/auth/register',
+      payload: { email: 'big@example.com', password: 'x'.repeat(20_000) },
+    });
+
+    expect(response.statusCode).toBe(413);
+    expect(response.headers['content-type']).toContain(
+      'application/problem+json'
+    );
+  });
+
+  it('allows credentials only for configured origins (CORS)', async () => {
+    const corsApp = buildApp({
+      ...appOptions,
+      corsOrigins: ['http://localhost:4173'],
+    });
+    const allowed = await corsApp.inject({
+      method: 'GET',
+      url: '/api/bears',
+      headers: { origin: 'http://localhost:4173' },
+    });
+    const other = await corsApp.inject({
+      method: 'GET',
+      url: '/api/bears',
+      headers: { origin: 'https://evil.example' },
+    });
+    await corsApp.close();
+
+    expect(allowed.headers['access-control-allow-origin']).toBe(
+      'http://localhost:4173'
+    );
+    expect(allowed.headers['access-control-allow-credentials']).toBe('true');
+    expect(other.headers['access-control-allow-origin']).toBeUndefined();
+  });
+
+  it('treats a malformed session cookie as "not logged in"', async () => {
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/auth/me',
+      cookies: { sid: "' OR 1=1 --" },
+    });
+
+    expect(response.statusCode).toBe(401);
   });
 });
 

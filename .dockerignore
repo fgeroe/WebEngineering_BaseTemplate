@@ -4,3 +4,5 @@
 .github
 .husky
 *.log
+# local secrets never go into an image
+**/.env

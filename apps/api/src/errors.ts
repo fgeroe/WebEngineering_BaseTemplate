@@ -42,6 +42,12 @@ export class ConflictError extends ApiError {
   readonly title = 'Conflict';
 }
 
+export class TooManyRequestsError extends ApiError {
+  readonly status = 429;
+  readonly type = '/problems/too-many-requests';
+  readonly title = 'Too many requests';
+}
+
 export class ServiceUnavailableError extends ApiError {
   readonly status = 503;
   readonly type = '/problems/service-unavailable';

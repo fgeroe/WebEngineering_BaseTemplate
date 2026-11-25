@@ -49,6 +49,15 @@ const configSchema = z.object({
     .default(60 * 60 * 24 * 7),
   // default: Secure in production; set false only for plain-http setups
   COOKIE_SECURE: z.stringbool().optional(),
+  // login and register: at most AUTH_RATE_LIMIT_MAX attempts per IP and window
+  AUTH_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(5),
+  AUTH_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
+  // largest accepted request body; comments are at most ~1 KB
+  BODY_LIMIT_BYTES: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(16 * 1024),
 });
 
 export type Config = z.infer<typeof configSchema>;
@@ -56,7 +65,9 @@ export type Config = z.infer<typeof configSchema>;
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   const result = configSchema.safeParse(env);
   if (!result.success) {
-    throw new Error(`Invalid environment:\n${z.prettifyError(result.error)}`);
+    throw new Error(
+      `Invalid environment (copy .env.example to .env):\n${z.prettifyError(result.error)}`
+    );
   }
   return result.data;
 }

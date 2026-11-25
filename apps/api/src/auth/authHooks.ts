@@ -1,8 +1,8 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { UnauthorizedError } from '../errors.js';
-import { sessionCookieName } from '../routes/auth.js';
 import type { User } from '../users/user.js';
 import type { AuthService } from './authService.js';
+import { readSessionToken } from './sessionCookie.js';
 
 declare module 'fastify' {
   interface FastifyRequest {
@@ -26,10 +26,10 @@ export function setupAuthHooks(
 
   return {
     loadUser: async (request) => {
-      request.user = await auth.findUser(request.cookies[sessionCookieName]);
+      request.user = await auth.findUser(readSessionToken(request));
     },
     requireUser: async (request) => {
-      request.user = await auth.currentUser(request.cookies[sessionCookieName]);
+      request.user = await auth.currentUser(readSessionToken(request));
     },
   };
 }

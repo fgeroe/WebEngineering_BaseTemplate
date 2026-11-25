@@ -7,7 +7,10 @@ export function setupCors(
   allowedOrigins: string[]
 ): void {
   void app.register(fastifyCors, {
+    // strict: only the configured origins, never "*" (config.ts only
+    // accepts real origins), because cookies are allowed cross-origin
     origin: allowedOrigins,
+    credentials: true,
     methods: ['GET', 'POST', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Accept', requestIdHeader],
     exposedHeaders: [requestIdHeader, 'Location'],

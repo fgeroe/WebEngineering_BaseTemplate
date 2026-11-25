@@ -2,6 +2,7 @@ import type { CookieSerializeOptions } from '@fastify/cookie';
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
 import type { AuthService } from '../auth/authService.js';
+import { readSessionToken, sessionCookieName } from '../auth/sessionCookie.js';
 import { problemResponses } from '../problem.js';
 import {
   credentialsSchema,
@@ -10,19 +11,25 @@ import {
 } from '../users/user.js';
 import type { UserService } from '../users/userService.js';
 
-export const sessionCookieName = 'sid';
-
 export interface AuthRoutesOptions {
   users: UserService;
   auth: AuthService;
   /** Secure flag of the session cookie (true in production). */
   cookieSecure: boolean;
+  /** Brute-force protection for login and register, per client IP. */
+  rateLimit: { max: number; timeWindowMs: number };
 }
 
 export const authRoutes: FastifyPluginAsyncZod<AuthRoutesOptions> = async (
   app,
-  { users, auth, cookieSecure }
+  { users, auth, cookieSecure, rateLimit }
 ) => {
+  // fixed window: at most `max` requests per IP and window, then 429 with
+  // Retry-After until the window is over
+  const limited = {
+    rateLimit: { max: rateLimit.max, timeWindow: rateLimit.timeWindowMs },
+  };
+
   const cookieOptions: CookieSerializeOptions = {
     httpOnly: true, // JavaScript (and therefore XSS) cannot read the cookie
     secure: cookieSecure, // only sent over HTTPS
@@ -39,9 +46,10 @@ export const authRoutes: FastifyPluginAsyncZod<AuthRoutesOptions> = async (
         body: registrationSchema,
         response: {
           201: userSchema,
-          ...problemResponses(400, 409, 415),
+          ...problemResponses(400, 409, 413, 415, 429),
         },
       },
+      config: limited,
     },
     async (request, reply) => {
       const user = await users.register(request.body);
@@ -58,14 +66,15 @@ export const authRoutes: FastifyPluginAsyncZod<AuthRoutesOptions> = async (
         body: credentialsSchema,
         response: {
           200: userSchema,
-          ...problemResponses(400, 401, 415),
+          ...problemResponses(400, 401, 413, 415, 429),
         },
       },
+      config: limited,
     },
     async (request, reply) => {
       const { user, sessionToken, expiresAt } = await auth.login(
         request.body,
-        request.cookies[sessionCookieName]
+        readSessionToken(request)
       );
       void reply.setCookie(sessionCookieName, sessionToken, {
         ...cookieOptions,
@@ -85,7 +94,7 @@ export const authRoutes: FastifyPluginAsyncZod<AuthRoutesOptions> = async (
       },
     },
     async (request, reply) => {
-      await auth.logout(request.cookies[sessionCookieName]);
+      await auth.logout(readSessionToken(request));
       void reply.clearCookie(sessionCookieName, cookieOptions);
       return await reply.code(204).send(null);
     }
@@ -106,7 +115,7 @@ export const authRoutes: FastifyPluginAsyncZod<AuthRoutesOptions> = async (
     async (request, reply) => {
       // personal data: never store it in a shared cache
       void reply.header('Cache-Control', 'private, no-store');
-      return await auth.currentUser(request.cookies[sessionCookieName]);
+      return await auth.currentUser(readSessionToken(request));
     }
   );
 };

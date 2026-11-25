@@ -65,7 +65,13 @@ async function send(url: string, init: RequestInit): Promise<Response> {
   const headers = new Headers(init.headers);
   headers.set('Accept', 'application/json, application/problem+json');
 
-  const response = await fetch(apiBaseUrl + url, { ...init, headers });
+  const response = await fetch(apiBaseUrl + url, {
+    ...init,
+    headers,
+    // the session cookie must also travel when the API is on another origin
+    // (cross-origin preview); the API allows that only for listed origins
+    credentials: apiBaseUrl === '' ? 'same-origin' : 'include',
+  });
   if (!response.ok) {
     throw await toApiError(response);
   }

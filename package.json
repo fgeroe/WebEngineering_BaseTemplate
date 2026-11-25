@@ -26,7 +26,8 @@
     "db:seed:comments": "npm run db:seed:comments -w apps/api --",
     "db:explain": "npm run db:explain -w apps/api --",
     "report:race": "npm run report:race -w apps/api --",
-    "db:seed:moderator": "npm run db:seed:moderator -w apps/api --"
+    "db:seed:moderator": "npm run db:seed:moderator -w apps/api --",
+    "security:brute-force": "npm run security:brute-force -w apps/api --"
   },
   "repository": {
     "type": "git",
