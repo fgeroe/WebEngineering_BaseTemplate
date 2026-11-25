@@ -514,3 +514,41 @@ index – that is why the API uses a cursor.
 | Secret scan with gitleaks                                                                                  | `.github/workflows/ci.yml`, job `secret-scan` | runs on every push and pull request                                   |
 
 Known limit: the rate limit counts per client IP. Behind the nginx container all clients share one IP; a production setup would configure Fastify's `trustProxy` for exactly that proxy.
+
+## Playground 6 – Security review (Task 5)
+
+Three risks from the OWASP Top 10:2025 that matter most for this API, each with how it applies here, what mitigates it and what remains.
+
+### A01 Broken Access Control – deleting other people's comments (IDOR)
+
+- **How it applies:** `DELETE /api/comments/:id` takes the comment id from the URL. Every visitor sees all comment ids in `GET /api/bears/:id/comments`, so random UUIDs hide nothing: if the server only checked "logged in", any user could delete any comment by changing the id.
+- **Mitigation:** the rule lives in one place on the server: the `requireUser` preHandler (401) and the policy `canDeleteComment` (author or moderator, otherwise 403) in `apps/api/src/comments/commentPolicy.ts`. The UI only reflects it through `canDelete` from the API; hiding the button is convenience, not protection. Tests: `authorisation for comments` in `app.test.ts` (401, 403, 204, 204).
+- **Residual risk:** access is allowed by default – a new route without a preHandler is public, and only code review catches that. A moderator account can delete everything and is protected by a password alone (no MFA). 403 instead of 404 confirms that a comment exists (harmless here, the ids are public anyway).
+
+### A05 Injection – SQL injection through `?q=` and stored XSS through comments
+
+- **How it applies:** the search text from `GET /api/bears?q=` ends up in a `LIKE` query; comment name and text are stored and shown to every visitor.
+- **Mitigation (SQL):** Drizzle sends parameterised queries – the SQL text holds only `$1`, the search text travels separately as a value and is never parsed as SQL. `LIKE` wildcards (`%`, `_`) are escaped as well. zod limits `q` to 100 characters, but lets `' OR '1'='1` through on purpose: validation is not the defence here.
+- **Mitigation (XSS):** comments are stored as typed and escaped on output: React renders `{comment.text}` as text, and the app uses no `dangerouslySetInnerHTML`. Second layer: the Content Security Policy for the page in `apps/web/nginx.conf` (`script-src 'self'`, no inline scripts or handlers). The API answers JSON only, with `nosniff` and its own CSP, and the session cookie is `HttpOnly`.
+- **Attack test:** `apps/api/src/sqlInjection.test.ts` (see below).
+- **Residual risk:** `sql.raw()` bypasses parameters (used only for constant column names in `seed.ts`) – any future use with user input reopens the hole. The CSP comes from nginx, so it protects the Docker setup, not the Vite dev server (`npm run dev`). Styles allow `'unsafe-inline'`. If XSS ever got through, `HttpOnly` stops cookie theft, but the script could still send requests as the logged-in user.
+
+### A07 Authentication Failures – guessing passwords and taking over sessions
+
+- **How it applies:** login and registration are public endpoints; anyone can try passwords, test which e-mail addresses exist, or try to reuse a session.
+- **Mitigation:** argon2id hashes with salt, the same 401 and the same timing for "wrong password" and "unknown e-mail" (dummy hash), a rate limit of 5 attempts per IP and minute (429 with `Retry-After`), 256-bit random session tokens stored only as SHA-256, logout that deletes the session, and a cookie with `HttpOnly`, `SameSite=Lax` and `Secure` in production. Tests: `login and session` and `hardening` in `app.test.ts`, plus `npm run security:brute-force`.
+- **Residual risk:** the minimum password length is 6 (the assignment asks for 12, NIST SP 800-63B-4 for 15 when the password is the only factor) and passwords are not checked against lists of breached passwords. The rate limit counts per IP and lives in memory: it resets on restart, does not stop an attack spread over many IPs, and behind nginx all clients share one IP. Registration answers 409 for a known e-mail, so addresses can still be enumerated there, slowed down by the rate limit. There is no MFA.
+
+### The attack test
+
+`apps/api/src/sqlInjection.test.ts` runs against a real PostgreSQL – [PGlite](https://pglite.dev), PostgreSQL compiled to WebAssembly, inside the test process – with all migrations and the real Drizzle repository, so no Docker is needed and it runs in CI with `npm test`.
+
+1. **The attack is real:** a query built by string concatenation, given `' UNION SELECT id::text, email, password_hash, NULL, role::text FROM users --`, returns the users' e-mail addresses and password hashes.
+2. **The mitigation holds:** the same payload – and a tautology, a stacked `DROP TABLE`, a `%` wildcard – sent to `GET /api/bears?q=` passes zod validation (200), returns no bears and no hash. The test also checks the query Drizzle actually sent: the SQL text contains only `ilike $1`, the payload is a separate parameter.
+3. **Nothing broke:** `?q=polar` still finds the polar bear, and both tables are intact afterwards.
+
+```bash
+npm test -w apps/api -- sqlInjection    # only the attack test
+```
+
+Changing the repository to ``sql.raw(`name ILIKE '%${q}%'`)`` makes four of the seven tests fail.
