@@ -1,5 +1,5 @@
 import { asc, eq, ilike } from 'drizzle-orm';
-import type { Database } from '../db/client.js';
+import type { AnyDatabase } from '../db/client.js';
 import { bears } from '../db/schema.js';
 import type { BearRepository } from './bearRepository.js';
 
@@ -15,7 +15,7 @@ function escapeLike(text: string): string {
   return text.replace(/[\\%_]/g, '\\$&');
 }
 
-export function createDrizzleBearRepository(db: Database): BearRepository {
+export function createDrizzleBearRepository(db: AnyDatabase): BearRepository {
   return {
     list: async ({ nameContains } = {}) =>
       await db
