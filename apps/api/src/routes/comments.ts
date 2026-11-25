@@ -2,6 +2,7 @@ import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
 import {
   commentPageSchema,
+  commentReportSchema,
   commentSchema,
   newCommentSchema,
 } from '../comments/comment.js';
@@ -97,5 +98,21 @@ export const commentRoutes: FastifyPluginAsyncZod<
       await comments.deleteComment(request.params.commentId);
       return await reply.code(204).send(null);
     }
+  );
+
+  app.post(
+    '/api/comments/:commentId/report',
+    {
+      schema: {
+        summary: 'Report a comment; it is hidden after the third report',
+        tags: ['comments'],
+        params: commentParamsSchema,
+        response: {
+          200: commentReportSchema,
+          ...problemResponses(400, 404),
+        },
+      },
+    },
+    async (request) => await comments.reportComment(request.params.commentId)
   );
 };

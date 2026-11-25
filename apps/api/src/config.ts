@@ -40,6 +40,8 @@ const configSchema = z.object({
   }),
   DB_POOL_MAX: z.coerce.number().int().min(1).max(100).default(10),
   DB_CONNECTION_TIMEOUT_MS: z.coerce.number().int().positive().default(2000),
+  // 'naive' only exists to demonstrate the lost update (Task 5)
+  REPORT_STRATEGY: z.enum(['locked', 'naive']).default('locked'),
 });
 
 export type Config = z.infer<typeof configSchema>;

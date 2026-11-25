@@ -7,14 +7,14 @@
     "dev": "tsx watch --env-file=.env.development src/server.ts",
     "build": "tsc -p tsconfig.build.json",
     "test": "vitest run",
-    "db:n-plus-one": "tsx --env-file=.env.development src/db/nPlusOneDemo.ts",
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate --dialect=postgresql --schema=./src/db/schema.ts --out=./drizzle",
     "db:migrate": "tsx --env-file=.env.development src/db/migrate.ts",
     "db:seed": "tsx --env-file=.env.development src/db/seed.ts",
     "db:seed:comments": "tsx --env-file=.env.development src/db/seedComments.ts",
-    "db:explain": "tsx --env-file=.env.development src/db/explainComments.ts"
+    "db:explain": "tsx --env-file=.env.development src/db/explainComments.ts",
+    "report:race": "tsx --env-file=.env.development src/db/reportRace.ts"
   },
   "dependencies": {
     "@fastify/cors": "^11.4.1",

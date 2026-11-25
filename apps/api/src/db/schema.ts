@@ -32,6 +32,10 @@ export const comments = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true, precision: 3 })
       .notNull()
       .defaultNow(),
+    reportCount: integer('report_count').notNull().default(0),
+    // set once the comment reached the report limit; hidden comments are
+    // no longer listed
+    hiddenAt: timestamp('hidden_at', { withTimezone: true, precision: 3 }),
   },
   (table) => [
     index('comments_bear_id_created_at_id_idx').on(
