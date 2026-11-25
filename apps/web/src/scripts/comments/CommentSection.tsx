@@ -11,7 +11,9 @@ interface CommentSectionProps {
 function CommentSection({ bearId }: CommentSectionProps): JSX.Element {
   const [isVisible, setIsVisible] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
-  const { state, addComment, removeComment } = useComments(bearId);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [loadMoreError, setLoadMoreError] = useState<string | null>(null);
+  const { state, addComment, removeComment, loadMore } = useComments(bearId);
 
   async function handleDelete(commentId: string): Promise<void> {
     setDeleteError(null);
@@ -19,6 +21,20 @@ function CommentSection({ bearId }: CommentSectionProps): JSX.Element {
       await removeComment(commentId);
     } catch (err) {
       setDeleteError(`Not possible to delete comment: ${describeError(err)}`);
+    }
+  }
+
+  async function handleLoadMore(): Promise<void> {
+    setIsLoadingMore(true);
+    setLoadMoreError(null);
+    try {
+      await loadMore();
+    } catch (err) {
+      setLoadMoreError(
+        `Not possible to load more comments: ${describeError(err)}`
+      );
+    } finally {
+      setIsLoadingMore(false);
     }
   }
 
@@ -66,6 +82,24 @@ function CommentSection({ bearId }: CommentSectionProps): JSX.Element {
               void handleDelete(commentId);
             }}
           />
+        )}
+
+        {state.status === 'success' && state.nextCursor !== null && (
+          <button
+            type="button"
+            disabled={isLoadingMore}
+            onClick={() => {
+              void handleLoadMore();
+            }}
+          >
+            {isLoadingMore ? 'Loading…' : 'Load more comments'}
+          </button>
+        )}
+
+        {loadMoreError !== null && (
+          <p role="alert" style={{ color: '#c33' }}>
+            {loadMoreError}
+          </p>
         )}
       </div>
     </section>

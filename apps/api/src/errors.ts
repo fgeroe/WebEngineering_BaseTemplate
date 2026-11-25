@@ -24,6 +24,12 @@ export class NotFoundError extends ApiError {
   readonly title = 'Resource not found';
 }
 
+export class ServiceUnavailableError extends ApiError {
+  readonly status = 503;
+  readonly type = '/problems/service-unavailable';
+  readonly title = 'Service unavailable';
+}
+
 export class UpstreamError extends ApiError {
   readonly status: number = 502;
   readonly type: string = '/problems/upstream-error';

@@ -5,13 +5,19 @@ import type { CommentEntry, NewComment } from './types';
 
 export type CommentsState =
   | { status: 'loading' }
-  | { status: 'success'; comments: CommentEntry[] }
+  | {
+      status: 'success';
+      bearId: string;
+      comments: CommentEntry[];
+      nextCursor: string | null;
+    }
   | { status: 'error'; message: string };
 
 export interface UseCommentsResult {
   state: CommentsState;
   addComment: (comment: NewComment) => Promise<void>;
   removeComment: (commentId: string) => Promise<void>;
+  loadMore: () => Promise<void>;
 }
 
 export function useComments(bearId: string): UseCommentsResult {
@@ -22,9 +28,14 @@ export function useComments(bearId: string): UseCommentsResult {
 
     async function load(): Promise<void> {
       try {
-        const comments = await fetchComments(bearId, controller.signal);
+        const page = await fetchComments(bearId, null, controller.signal);
         if (controller.signal.aborted) return;
-        setState({ status: 'success', comments });
+        setState({
+          status: 'success',
+          bearId,
+          comments: page.items,
+          nextCursor: page.nextCursor,
+        });
       } catch (err) {
         if (controller.signal.aborted) return;
         console.error('fetchComments:', err);
@@ -39,11 +50,27 @@ export function useComments(bearId: string): UseCommentsResult {
     };
   }, [bearId]);
 
+  async function loadMore(): Promise<void> {
+    if (state.status !== 'success' || state.nextCursor === null) return;
+    const page = await fetchComments(state.bearId, state.nextCursor);
+    setState((previous) =>
+      // ignore the answer if the user switched to another bear meanwhile
+      previous.status === 'success' && previous.bearId === state.bearId
+        ? {
+            ...previous,
+            comments: [...previous.comments, ...page.items],
+            nextCursor: page.nextCursor,
+          }
+        : previous
+    );
+  }
+
   async function addComment(comment: NewComment): Promise<void> {
     const created = await createComment(bearId, comment);
+    // newest first: a new comment goes to the top
     setState((previous) =>
       previous.status === 'success'
-        ? { ...previous, comments: [...previous.comments, created] }
+        ? { ...previous, comments: [created, ...previous.comments] }
         : previous
     );
   }
@@ -62,5 +89,5 @@ export function useComments(bearId: string): UseCommentsResult {
     );
   }
 
-  return { state, addComment, removeComment };
+  return { state, addComment, removeComment, loadMore };
 }

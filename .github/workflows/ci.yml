@@ -17,6 +17,7 @@ jobs:
 
       - run: npm ci
       - run: npm run typecheck
+      - run: npm test
       - run: npm run lint
       - run: npm run format:check
       - run: npm run build
@@ -32,6 +33,8 @@ jobs:
       - name: Smoke test
         run: |
           curl --fail --include http://localhost:3000/health
+          curl --fail --include http://localhost:3000/health/ready
+          curl --fail --silent http://localhost:3000/api/bears | head -c 300
           curl --fail --silent --output /dev/null http://localhost:8080/
 
       - name: Show logs

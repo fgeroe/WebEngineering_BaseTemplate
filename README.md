@@ -415,3 +415,74 @@ You might have noticed that the base project has a number of accessibility issue
 > _Note your findings here..._
 
 <p>© 2026 Leon Freudenthaler (Hochschule Campus Wien). All rights reversed.</p>
+
+## Playground 5 – Index measurement (Task 4)
+
+Setup: 100,000 generated comments (`npm run db:seed:comments`), spread evenly
+over all bears (12,501 comments for `ursus-arctos`). Measured with
+`npm run db:explain` (`EXPLAIN (ANALYZE, BUFFERS)`) on PostgreSQL 18.
+Query (first page, as sent by the API):
+
+```sql
+SELECT id, bear_id, author, text, created_at FROM comments
+WHERE bear_id = 'ursus-arctos'
+ORDER BY created_at DESC, id DESC
+LIMIT 21;
+```
+
+### Without index on (bear_id, created_at, id)
+
+Only `comments_bear_id_idx (bear_id)` from migration 0000 exists.
+
+```text
+Limit  (cost=1949.00..1949.05 rows=21 width=74) (actual time=2.884..2.887 rows=21.00 loops=1)
+  Buffers: shared hit=1351
+  ->  Sort  (cost=1949.00..1979.43 rows=12173 width=74) (actual time=2.883..2.884 rows=21.00 loops=1)
+        Sort Key: created_at DESC, id DESC
+        Sort Method: top-N heapsort  Memory: 27kB
+        Buffers: shared hit=1351
+        ->  Bitmap Heap Scan on comments  (cost=134.63..1620.80 rows=12173 width=74) (actual time=0.533..1.791 rows=12501.00 loops=1)
+              Recheck Cond: (bear_id = 'ursus-arctos'::text)
+              Heap Blocks: exact=1334
+              Buffers: shared hit=1345
+              ->  Bitmap Index Scan on comments_bear_id_idx  (cost=0.00..131.59 rows=12173 width=0) (actual time=0.400..0.401 rows=12501.00 loops=1)
+                    Index Cond: (bear_id = 'ursus-arctos'::text)
+                    Index Searches: 1
+                    Buffers: shared hit=11
+Planning Time: 0.501 ms
+Execution Time: 2.963 ms
+```
+
+### With index on (bear_id, created_at, id)
+
+Migration `0001_comments_pagination_index.sql` replaces the single-column index.
+
+```text
+Limit  (cost=0.42..10.66 rows=21 width=74) (actual time=0.045..0.050 rows=21.00 loops=1)
+  Buffers: shared hit=3 read=3
+  ->  Index Scan Backward using comments_bear_id_created_at_id_idx on comments  (cost=0.42..5937.51 rows=12173 width=74) (actual time=0.044..0.048 rows=21.00 loops=1)
+        Index Cond: (bear_id = 'ursus-arctos'::text)
+        Index Searches: 1
+        Buffers: shared hit=3 read=3
+Planning Time: 0.208 ms
+Execution Time: 0.079 ms
+```
+
+### Result
+
+| Query                        | without index           | with index            |
+| ---------------------------- | ----------------------- | --------------------- |
+| First page                   | 2.963 ms, 1,351 buffers | 0.079 ms, 6 buffers   |
+| Cursor page after 5,000 rows | 2.528 ms, 1,345 buffers | 0.088 ms, 6 buffers   |
+| OFFSET 5000 (comparison)     | 5.201 ms                | 0.855 ms, 575 buffers |
+
+The first page is about 37 times faster and reads 225 times fewer pages.
+Without the composite index PostgreSQL reads all 12,501 comments of the bear
+(Bitmap Heap Scan) and sorts them to return 21 rows. With it, the rows are
+already stored in the requested order inside the index, so PostgreSQL walks the
+index backwards and stops after 21 entries – no sort step at all.
+
+The cursor page uses the same index: `(created_at, id) < (cursor)` becomes part
+of the index condition, so a page deep in the list costs the same as the first
+one. `OFFSET 5000` still has to read and discard 5,021 rows, even with the
+index – that is why the API uses a cursor.

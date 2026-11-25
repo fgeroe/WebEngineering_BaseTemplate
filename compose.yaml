@@ -1,16 +1,39 @@
 services:
+  db:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-bears}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-bears}
+      POSTGRES_DB: ${POSTGRES_DB:-bears}
+    volumes:
+      - db-data:/var/lib/postgresql
+    ports:
+      - '127.0.0.1:${DB_PORT:-5432}:5432'
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+
   api:
     build:
       context: .
       dockerfile: apps/api/Dockerfile
     environment:
       PORT: 3000
+      DATABASE_URL: postgres://${POSTGRES_USER:-bears}:${POSTGRES_PASSWORD:-bears}@db:5432/${POSTGRES_DB:-bears}
+      DB_POOL_MAX: ${DB_POOL_MAX:-10}
+      REPORT_STRATEGY: ${REPORT_STRATEGY:-locked}
       WIKIPEDIA_API_URL: ${WIKIPEDIA_API_URL:-https://en.wikipedia.org/w/api.php}
       WIKIPEDIA_TIMEOUT_MS: ${WIKIPEDIA_TIMEOUT_MS:-5000}
       ENABLE_DEBUG_ROUTES: ${ENABLE_DEBUG_ROUTES:-false}
       CORS_ORIGINS: ${CORS_ORIGINS:-}
     ports:
       - '3000:3000'
+    depends_on:
+      db:
+        condition: service_healthy
 
   web:
     build:
@@ -21,3 +44,6 @@ services:
     depends_on:
       api:
         condition: service_healthy
+
+volumes:
+  db-data:

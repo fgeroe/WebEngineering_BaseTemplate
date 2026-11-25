@@ -1,10 +1,13 @@
 import { jsonBody, requestJson, requestWithoutContent } from '../api';
 import {
-  commentListSchema,
+  commentPageSchema,
   commentSchema,
   type CommentEntry,
+  type CommentPage,
   type NewComment,
 } from './types';
+
+const pageSize = 10;
 
 function commentsUrl(bearId: string): string {
   return `/api/bears/${encodeURIComponent(bearId)}/comments`;
@@ -12,9 +15,18 @@ function commentsUrl(bearId: string): string {
 
 export async function fetchComments(
   bearId: string,
-  signal: AbortSignal
-): Promise<CommentEntry[]> {
-  return await requestJson(commentsUrl(bearId), commentListSchema, { signal });
+  cursor: string | null,
+  signal?: AbortSignal
+): Promise<CommentPage> {
+  const params = new URLSearchParams({ limit: String(pageSize) });
+  if (cursor !== null) {
+    params.set('cursor', cursor);
+  }
+  return await requestJson(
+    `${commentsUrl(bearId)}?${params.toString()}`,
+    commentPageSchema,
+    { signal }
+  );
 }
 
 export async function createComment(

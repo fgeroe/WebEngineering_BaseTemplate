@@ -24,3 +24,31 @@ export const newCommentSchema = z
 
 export type Comment = z.infer<typeof commentSchema>;
 export type NewComment = z.infer<typeof newCommentSchema>;
+
+export const commentPageSchema = z
+  .object({
+    items: z.array(commentSchema),
+    nextCursor: z
+      .string()
+      .nullable()
+      .describe('Send as ?cursor= to get the next page; null on the last page'),
+  })
+  .meta({ id: 'CommentPage' });
+
+export type CommentPage = z.infer<typeof commentPageSchema>;
+
+export const commentReportSchema = z
+  .object({
+    id: z.uuid(),
+    reportCount: z.number().int().nonnegative(),
+    hidden: z.boolean(),
+  })
+  .meta({ id: 'CommentReport' });
+
+export type CommentReport = z.infer<typeof commentReportSchema>;
+
+/** Moderation state of a comment, stored next to it. */
+export interface ReportState {
+  reportCount: number;
+  hiddenAt: string | null;
+}

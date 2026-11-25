@@ -8,15 +8,24 @@
     "apps/api"
   ],
   "scripts": {
-    "dev": "concurrently --names web,api --prefix-colors blue,green \"wait-on --timeout 30000 http-get://127.0.0.1:3000/health && npm run dev -w apps/web\" \"npm run dev -w apps/api\"",
+    "dev": "npm run db:up && npm run db:migrate && npm run db:seed -- --if-empty && concurrently --names web,api --prefix-colors blue,green \"wait-on --timeout 30000 http-get://127.0.0.1:3000/health && npm run dev -w apps/web\" \"npm run dev -w apps/api\"",
     "preview:cross-origin": "npm run preview:cross-origin -w apps/web",
     "build": "npm run build --workspaces",
     "typecheck": "npm run typecheck --workspaces",
+    "test": "npm run test --workspaces --if-present",
     "lint": "eslint apps --ext .js,.jsx,.ts,.tsx --max-warnings 0",
     "lint:fix": "eslint apps --ext .js,.jsx,.ts,.tsx --fix",
     "format": "prettier --write \"apps/*/src/**/*.{js,jsx,ts,tsx}\" \"apps/*/*.ts\"",
     "format:check": "prettier --check \"apps/*/src/**/*.{js,jsx,ts,tsx}\" \"apps/*/*.ts\"",
-    "prepare": "husky"
+    "prepare": "husky",
+    "db:up": "docker compose up --detach --wait db",
+    "db:down": "docker compose stop db",
+    "db:generate": "npm run db:generate -w apps/api --",
+    "db:migrate": "npm run db:migrate -w apps/api --",
+    "db:seed": "npm run db:seed -w apps/api --",
+    "db:seed:comments": "npm run db:seed:comments -w apps/api --",
+    "db:explain": "npm run db:explain -w apps/api --",
+    "report:race": "npm run report:race -w apps/api --"
   },
   "repository": {
     "type": "git",

@@ -1,33 +1,53 @@
 import { buildApp } from './app.js';
 import { createBearService } from './bears/bearService.js';
-import { createWikipediaClient } from './bears/wikipediaClient.js';
-import { createInMemoryCommentRepository } from './comments/commentRepository.js';
+import { createDrizzleBearRepository } from './bears/drizzleBearRepository.js';
 import { createCommentService } from './comments/commentService.js';
+import {
+  createDrizzleCommentRepository,
+  createDrizzleCommentTransaction,
+} from './comments/drizzleCommentRepository.js';
 import { loadConfig } from './config.js';
+import { createDatabase } from './db/client.js';
+import { createPool, pingDatabase } from './db/pool.js';
 
 const config = loadConfig();
 
-const wikipedia = createWikipediaClient({
-  apiUrl: config.WIKIPEDIA_API_URL,
-  timeoutMs: config.WIKIPEDIA_TIMEOUT_MS,
-  userAgent: config.WIKIPEDIA_USER_AGENT,
+const pool = createPool({
+  connectionString: config.DATABASE_URL,
+  max: config.DB_POOL_MAX,
+  connectionTimeoutMs: config.DB_CONNECTION_TIMEOUT_MS,
 });
 
-const bears = createBearService(wikipedia);
+const db = createDatabase(pool);
+
+const bears = createBearService(createDrizzleBearRepository(db));
 const comments = createCommentService({
   bears,
-  comments: createInMemoryCommentRepository(),
+  comments: createDrizzleCommentRepository(db),
+  transaction: createDrizzleCommentTransaction(db),
+  reportStrategy: config.REPORT_STRATEGY,
 });
 
 const app = buildApp(
   {
     bears,
     comments,
+    checkDatabase: async () => {
+      await pingDatabase(pool);
+    },
     corsOrigins: config.CORS_ORIGINS,
     debugRoutes: config.ENABLE_DEBUG_ROUTES ?? config.NODE_ENV !== 'production',
   },
   { logger: true }
 );
+
+pool.on('error', (err) => {
+  app.log.warn({ err }, 'Idle database connection failed');
+});
+
+app.addHook('onClose', async () => {
+  await pool.end();
+});
 
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {
   process.once(signal, () => {
