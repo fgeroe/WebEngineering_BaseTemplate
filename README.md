@@ -486,3 +486,15 @@ The cursor page uses the same index: `(created_at, id) < (cursor)` becomes part
 of the index condition, so a page deep in the list costs the same as the first
 one. `OFFSET 5000` still has to read and discard 5,021 rows, even with the
 index – that is why the API uses a cursor.
+
+## Playground 6 – ADR 001: Server-side sessions instead of JWT
+
+- **Status:** accepted (Playground 6, Task 2).
+- **Context:** The API must know who sends a request, and logout must really end the login. There is one API and one PostgreSQL database.
+- **Option A – server-side session:** a random session id in an `HttpOnly` cookie, the session stored in PostgreSQL and looked up on every request.
+- **Option B – JWT:** a signed token with user id and expiry; the API checks the signature without a database lookup.
+- **Decision:** Option A. A 256-bit random token goes into the cookie `sid` (`HttpOnly`, `SameSite=Lax`, `Path=/`, `Secure` in production); the table `sessions` stores only its SHA-256 hash, the user id and `expires_at` (7 days).
+- **Why:** logout and revocation are one `DELETE` and take effect immediately. A JWT stays valid until it expires unless we add a deny-list – which is a database lookup again. With one API and a database anyway, statelessness gains us nothing.
+- **Consequences (+):** instant logout, no signing key to manage, a small cookie (43 characters), nothing readable by JavaScript.
+- **Consequences (–):** one primary-key lookup per authenticated request; expired rows pile up and need a cleanup job (Playground 7).
+- **Libraries:** only `@fastify/cookie`. `@fastify/session` is not needed: the session logic is a few lines in `apps/api/src/auth/authService.ts` and fits the repository pattern from Playground 5.

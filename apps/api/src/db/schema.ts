@@ -61,3 +61,22 @@ export const users = pgTable('users', {
     .notNull()
     .defaultNow(),
 });
+
+export const sessions = pgTable(
+  'sessions',
+  {
+    // SHA-256 of the token in the cookie: a leaked table holds no usable cookie
+    id: text('id').primaryKey(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at', { withTimezone: true, precision: 3 })
+      .notNull()
+      .defaultNow(),
+    expiresAt: timestamp('expires_at', {
+      withTimezone: true,
+      precision: 3,
+    }).notNull(),
+  },
+  (table) => [index('sessions_user_id_idx').on(table.userId)]
+);

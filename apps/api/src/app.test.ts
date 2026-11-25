@@ -1,6 +1,8 @@
 import type { FastifyInstance, LightMyRequestResponse } from 'fastify';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { buildApp } from './app.js';
+import { createAuthService } from './auth/authService.js';
+import { createInMemorySessionRepository } from './auth/sessionRepository.js';
 import type { Bear } from './bears/bear.js';
 import { createInMemoryBearRepository } from './bears/bearRepository.js';
 import { createBearService } from './bears/bearService.js';
@@ -50,14 +52,19 @@ beforeEach(() => {
     transaction: createInMemoryCommentTransaction(commentRepository),
   });
   userRepository = createInMemoryUserRepository();
-  const users = createUserService({
+  const passwords = createArgon2PasswordHasher();
+  const users = createUserService({ users: userRepository, passwords });
+  const auth = createAuthService({
     users: userRepository,
-    passwords: createArgon2PasswordHasher(),
+    sessions: createInMemorySessionRepository(userRepository),
+    passwords,
+    sessionMaxAgeSeconds: 3600,
   });
   app = buildApp({
     bears,
     comments,
     users,
+    auth,
     checkDatabase: async () => {
       if (!databaseUp) throw new Error('database down');
     },
@@ -318,6 +325,89 @@ describe('registration', () => {
     const response = await register('not-an-email', password);
 
     expect(response.statusCode).toBe(400);
+  });
+});
+
+describe('login and session', () => {
+  const email = 'anna@example.com';
+  const password = 'correct horse battery staple';
+
+  async function login(pass = password): Promise<LightMyRequestResponse> {
+    return await app.inject({
+      method: 'POST',
+      url: '/api/auth/login',
+      payload: { email, password: pass },
+    });
+  }
+
+  async function me(sid?: string): Promise<LightMyRequestResponse> {
+    return await app.inject({
+      method: 'GET',
+      url: '/api/auth/me',
+      ...(sid === undefined ? {} : { cookies: { sid } }),
+    });
+  }
+
+  beforeEach(async () => {
+    await app.inject({
+      method: 'POST',
+      url: '/api/auth/register',
+      payload: { email, password },
+    });
+  });
+
+  it('answers 401 on /me without a cookie', async () => {
+    const response = await me();
+
+    expect(response.statusCode).toBe(401);
+    expect(response.headers['content-type']).toContain(
+      'application/problem+json'
+    );
+  });
+
+  it('sets an HttpOnly, SameSite=Lax session cookie and knows the user', async () => {
+    const response = await login();
+
+    expect(response.statusCode).toBe(200);
+    const cookie = response.cookies.find((entry) => entry.name === 'sid');
+    expect(cookie).toMatchObject({
+      httpOnly: true,
+      sameSite: 'Lax',
+      path: '/',
+    });
+
+    const current = await me(cookie?.value);
+    expect(current.statusCode).toBe(200);
+    expect(current.json<{ email: string }>().email).toBe(email);
+  });
+
+  it('gives the same 401 for a wrong password and an unknown email', async () => {
+    const wrongPassword = await login('wrong password 123');
+    const unknownEmail = await app.inject({
+      method: 'POST',
+      url: '/api/auth/login',
+      payload: { email: 'nobody@example.com', password },
+    });
+
+    expect(wrongPassword.statusCode).toBe(401);
+    expect(unknownEmail.statusCode).toBe(401);
+    expect(unknownEmail.json<{ detail: string }>().detail).toBe(
+      wrongPassword.json<{ detail: string }>().detail
+    );
+  });
+
+  it('invalidates the session on logout, not only the cookie', async () => {
+    const sid = (await login()).cookies.find((c) => c.name === 'sid')?.value;
+
+    const logout = await app.inject({
+      method: 'POST',
+      url: '/api/auth/logout',
+      cookies: { sid: sid ?? '' },
+    });
+
+    expect(logout.statusCode).toBe(204);
+    // even if someone kept a copy of the old cookie, it no longer works
+    expect((await me(sid)).statusCode).toBe(401);
   });
 });
 

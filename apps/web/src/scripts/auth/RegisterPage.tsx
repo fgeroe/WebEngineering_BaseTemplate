@@ -88,7 +88,7 @@ function RegisterPage(): JSX.Element {
             created.
           </p>
           <p className="auth-footer">
-            <Link to="/bears">Discover the bears</Link>
+            <Link to="/login">Log in now</Link>
           </p>
         </section>
       </main>

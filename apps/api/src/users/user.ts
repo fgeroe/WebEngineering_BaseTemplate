@@ -10,15 +10,14 @@ export const passwordLimits = {
   maxLength: 128,
 } as const;
 
+// normalise first, then check the format
+const emailSchema = z.string().trim().toLowerCase().pipe(z.email().max(254));
+
 export const registrationSchema = z
   .object({
-    // normalise first, then check the format
-    email: z
-      .string()
-      .trim()
-      .toLowerCase()
-      .pipe(z.email().max(254))
-      .describe('Email address; stored trimmed and lower-cased'),
+    email: emailSchema.describe(
+      'Email address; stored trimmed and lower-cased'
+    ),
     // length only - no composition rules (no "1 digit, 1 symbol ...")
     password: z
       .string()
@@ -43,4 +42,18 @@ export type User = z.infer<typeof userSchema>;
 /** What is stored about a user. */
 export interface UserRecord extends User {
   passwordHash: string;
+}
+
+export const credentialsSchema = z
+  .object({
+    email: emailSchema,
+    // no length rule on login: it must work for every existing password
+    password: z.string().min(1).max(passwordLimits.maxLength),
+  })
+  .meta({ id: 'Credentials' });
+
+export type Credentials = z.infer<typeof credentialsSchema>;
+
+export function toUser({ id, email, role, createdAt }: UserRecord): User {
+  return { id, email, role, createdAt };
 }

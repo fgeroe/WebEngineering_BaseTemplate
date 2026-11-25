@@ -42,6 +42,13 @@ const configSchema = z.object({
   DB_CONNECTION_TIMEOUT_MS: z.coerce.number().int().positive().default(2000),
   // 'naive' only exists to demonstrate the lost update (Task 5)
   REPORT_STRATEGY: z.enum(['locked', 'naive']).default('locked'),
+  SESSION_MAX_AGE_SECONDS: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(60 * 60 * 24 * 7),
+  // default: Secure in production; set false only for plain-http setups
+  COOKIE_SECURE: z.stringbool().optional(),
 });
 
 export type Config = z.infer<typeof configSchema>;
