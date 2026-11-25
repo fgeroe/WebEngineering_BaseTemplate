@@ -6,7 +6,7 @@ import type { UserRepository } from './userRepository.js';
 
 type UserRow = typeof users.$inferSelect;
 
-function toUserRecord(row: UserRow): UserRecord {
+export function toUserRecord(row: UserRow): UserRecord {
   return {
     id: row.id,
     email: row.email,
@@ -34,6 +34,15 @@ export function createDrizzleUserRepository(db: Executor): UserRepository {
         .select()
         .from(users)
         .where(eq(users.email, email))
+        .limit(1);
+      return row === undefined ? undefined : toUserRecord(row);
+    },
+
+    findById: async (id) => {
+      const [row] = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, id))
         .limit(1);
       return row === undefined ? undefined : toUserRecord(row);
     },

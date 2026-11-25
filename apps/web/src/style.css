@@ -439,3 +439,51 @@ nav .account-link.active {
   font-size: 1.7rem;
   color: #2a2a2a;
 }
+
+/* Login state in the navigation (Playground 6, Task 2) */
+
+nav .account {
+  gap: 1.2rem;
+}
+
+nav button.account-link {
+  font-family: Arial, sans-serif;
+  text-transform: uppercase;
+  border: 0;
+  cursor: pointer;
+}
+
+nav .account-secondary {
+  font-size: 1.6rem;
+  line-height: 32px;
+  white-space: nowrap;
+}
+
+nav .account-secondary:hover,
+nav .account-secondary:focus-visible {
+  text-decoration: underline;
+}
+
+nav .account-user {
+  font-family: 'Open Sans Condensed', sans-serif;
+  font-size: 1.5rem;
+  max-width: 14rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* keep the navigation readable when the account area needs room */
+
+nav li {
+  padding: 0 0.6rem;
+  white-space: nowrap;
+}
+
+nav .search {
+  padding: 0 1.2rem;
+}
+
+nav .account {
+  flex: none;
+}

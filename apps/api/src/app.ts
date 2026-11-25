@@ -1,3 +1,4 @@
+import fastifyCookie from '@fastify/cookie';
 import Fastify, {
   type FastifyInstance,
   type FastifyServerOptions,
@@ -6,6 +7,7 @@ import {
   serializerCompiler,
   validatorCompiler,
 } from 'fastify-type-provider-zod';
+import type { AuthService } from './auth/authService.js';
 import type { BearService } from './bears/bearService.js';
 import type { CommentService } from './comments/commentService.js';
 import { setupCors } from './cors.js';
@@ -23,7 +25,9 @@ export interface AppOptions {
   bears: BearService;
   comments: CommentService;
   users: UserService;
+  auth: AuthService;
   checkDatabase: () => Promise<void>;
+  cookieSecure?: boolean;
   corsOrigins?: string[];
   debugRoutes?: boolean;
 }
@@ -33,7 +37,9 @@ export function buildApp(
     bears,
     comments,
     users,
+    auth,
     checkDatabase,
+    cookieSecure = false,
     corsOrigins = [],
     debugRoutes: enableDebugRoutes = false,
   }: AppOptions,
@@ -52,11 +58,12 @@ export function buildApp(
   setupErrorHandling(app);
   setupCors(app, corsOrigins);
   setupDocs(app);
+  void app.register(fastifyCookie);
 
   void app.register(healthRoutes, { checkDatabase });
   void app.register(bearRoutes, { bears });
   void app.register(commentRoutes, { comments });
-  void app.register(authRoutes, { users });
+  void app.register(authRoutes, { users, auth, cookieSecure });
   if (enableDebugRoutes) {
     void app.register(debugRoutes);
   }

@@ -18,6 +18,12 @@ export class ValidationError extends ApiError {
   }
 }
 
+export class UnauthorizedError extends ApiError {
+  readonly status = 401;
+  readonly type = '/problems/unauthorized';
+  readonly title = 'Unauthorized';
+}
+
 export class NotFoundError extends ApiError {
   readonly status = 404;
   readonly type = '/problems/not-found';

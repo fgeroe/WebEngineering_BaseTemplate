@@ -1,4 +1,6 @@
 import { buildApp } from './app.js';
+import { createAuthService } from './auth/authService.js';
+import { createDrizzleSessionRepository } from './auth/drizzleSessionRepository.js';
 import { createBearService } from './bears/bearService.js';
 import { createDrizzleBearRepository } from './bears/drizzleBearRepository.js';
 import { createCommentService } from './comments/commentService.js';
@@ -30,9 +32,14 @@ const comments = createCommentService({
   transaction: createDrizzleCommentTransaction(db),
   reportStrategy: config.REPORT_STRATEGY,
 });
-const users = createUserService({
-  users: createDrizzleUserRepository(db),
-  passwords: createArgon2PasswordHasher(),
+const userRepository = createDrizzleUserRepository(db);
+const passwords = createArgon2PasswordHasher();
+const users = createUserService({ users: userRepository, passwords });
+const auth = createAuthService({
+  users: userRepository,
+  sessions: createDrizzleSessionRepository(db),
+  passwords,
+  sessionMaxAgeSeconds: config.SESSION_MAX_AGE_SECONDS,
 });
 
 const app = buildApp(
@@ -40,9 +47,11 @@ const app = buildApp(
     bears,
     comments,
     users,
+    auth,
     checkDatabase: async () => {
       await pingDatabase(pool);
     },
+    cookieSecure: config.COOKIE_SECURE ?? config.NODE_ENV === 'production',
     corsOrigins: config.CORS_ORIGINS,
     debugRoutes: config.ENABLE_DEBUG_ROUTES ?? config.NODE_ENV !== 'production',
   },

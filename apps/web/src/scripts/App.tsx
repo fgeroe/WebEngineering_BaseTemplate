@@ -1,6 +1,8 @@
 import type { JSX } from 'react';
 import { Link, Route, Routes, useSearchParams } from 'react-router';
 import Article from './article/Article';
+import AuthProvider from './auth/AuthProvider';
+import LoginPage from './auth/LoginPage';
 import RegisterPage from './auth/RegisterPage';
 import BearDetailPage from './bears/BearDetailPage';
 import BearListPage from './bears/BearListPage';
@@ -20,38 +22,41 @@ function App(): JSX.Element {
   }
 
   return (
-    <BearsProvider>
-      <Header />
-      <Navigation searchTerm={searchTerm} onSearch={handleSearch} />
-      <SearchContext value={searchTerm}>
-        <Routes>
-          <Route
-            path="/"
-            element={
-              <main>
-                <Article />
-                <RelatedLinks />
-              </main>
-            }
-          />
-          <Route path="/bears" element={<BearListPage />} />
-          <Route path="/bears/:bearId" element={<BearDetailPage />} />
-          <Route path="/register" element={<RegisterPage />} />
-          <Route
-            path="*"
-            element={
-              <main>
-                <h1>Page not found</h1>
-                <p>
-                  <Link to="/">Back to the homepage</Link>
-                </p>
-              </main>
-            }
-          />
-        </Routes>
-      </SearchContext>
-      <Footer />
-    </BearsProvider>
+    <AuthProvider>
+      <BearsProvider>
+        <Header />
+        <Navigation searchTerm={searchTerm} onSearch={handleSearch} />
+        <SearchContext value={searchTerm}>
+          <Routes>
+            <Route
+              path="/"
+              element={
+                <main>
+                  <Article />
+                  <RelatedLinks />
+                </main>
+              }
+            />
+            <Route path="/bears" element={<BearListPage />} />
+            <Route path="/bears/:bearId" element={<BearDetailPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route
+              path="*"
+              element={
+                <main>
+                  <h1>Page not found</h1>
+                  <p>
+                    <Link to="/">Back to the homepage</Link>
+                  </p>
+                </main>
+              }
+            />
+          </Routes>
+        </SearchContext>
+        <Footer />
+      </BearsProvider>
+    </AuthProvider>
   );
 }
 
