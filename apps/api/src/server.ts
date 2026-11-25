@@ -52,6 +52,11 @@ const app = buildApp(
       await pingDatabase(pool);
     },
     cookieSecure: config.COOKIE_SECURE ?? config.NODE_ENV === 'production',
+    bodyLimit: config.BODY_LIMIT_BYTES,
+    authRateLimit: {
+      max: config.AUTH_RATE_LIMIT_MAX,
+      timeWindowMs: config.AUTH_RATE_LIMIT_WINDOW_MS,
+    },
     corsOrigins: config.CORS_ORIGINS,
     debugRoutes: config.ENABLE_DEBUG_ROUTES ?? config.NODE_ENV !== 'production',
   },

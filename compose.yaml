@@ -3,7 +3,8 @@ services:
     image: postgres:18-alpine
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-bears}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-bears}
+      # no default: the password only comes from .env (never from git)
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env - see .env.example}
       POSTGRES_DB: ${POSTGRES_DB:-bears}
     volumes:
       - db-data:/var/lib/postgresql
@@ -22,7 +23,7 @@ services:
       dockerfile: apps/api/Dockerfile
     environment:
       PORT: 3000
-      DATABASE_URL: postgres://${POSTGRES_USER:-bears}:${POSTGRES_PASSWORD:-bears}@db:5432/${POSTGRES_DB:-bears}
+      DATABASE_URL: postgres://${POSTGRES_USER:-bears}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env - see .env.example}@db:5432/${POSTGRES_DB:-bears}
       DB_POOL_MAX: ${DB_POOL_MAX:-10}
       REPORT_STRATEGY: ${REPORT_STRATEGY:-locked}
       # the local stack runs on plain http://localhost:8080; behind HTTPS in

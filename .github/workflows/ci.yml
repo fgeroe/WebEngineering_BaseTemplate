@@ -27,6 +27,9 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - name: Create .env from the example (no secrets in git)
+        run: cp .env.example .env
+
       - name: Build and start the stack
         run: docker compose up --build --detach --wait
 
@@ -44,3 +47,15 @@ jobs:
       - name: Stop the stack
         if: always()
         run: docker compose down
+
+  secret-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # gitleaks scans the commits of the push / pull request
+
+      - name: Scan for committed secrets
+        uses: gitleaks/gitleaks-action@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
