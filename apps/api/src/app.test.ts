@@ -1,4 +1,4 @@
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, LightMyRequestResponse } from 'fastify';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { buildApp } from './app.js';
 import type { Bear } from './bears/bear.js';
@@ -10,6 +10,12 @@ import {
   createInMemoryCommentTransaction,
 } from './comments/commentRepository.js';
 import { createCommentService } from './comments/commentService.js';
+import { createArgon2PasswordHasher } from './users/passwordHasher.js';
+import {
+  createInMemoryUserRepository,
+  type UserRepository,
+} from './users/userRepository.js';
+import { createUserService } from './users/userService.js';
 
 const testBears: Bear[] = [
   {
@@ -32,6 +38,7 @@ const unknownCommentId = '00000000-0000-4000-8000-000000000000';
 
 let app: FastifyInstance;
 let databaseUp: boolean;
+let userRepository: UserRepository;
 
 beforeEach(() => {
   databaseUp = true;
@@ -42,9 +49,15 @@ beforeEach(() => {
     comments: commentRepository,
     transaction: createInMemoryCommentTransaction(commentRepository),
   });
+  userRepository = createInMemoryUserRepository();
+  const users = createUserService({
+    users: userRepository,
+    passwords: createArgon2PasswordHasher(),
+  });
   app = buildApp({
     bears,
     comments,
+    users,
     checkDatabase: async () => {
       if (!databaseUp) throw new Error('database down');
     },
@@ -236,6 +249,75 @@ describe('reports', () => {
     });
 
     expect(response.statusCode).toBe(404);
+  });
+});
+
+describe('registration', () => {
+  const password = 'correct horse battery staple';
+
+  async function register(
+    email: string,
+    pass: string
+  ): Promise<LightMyRequestResponse> {
+    return await app.inject({
+      method: 'POST',
+      url: '/api/auth/register',
+      payload: { email, password: pass },
+    });
+  }
+
+  it('creates a user and never returns the password or its hash', async () => {
+    const response = await register('  Anna@Example.COM ', password);
+
+    expect(response.statusCode).toBe(201);
+    const body = response.json<Record<string, unknown>>();
+    expect(body).toMatchObject({ email: 'anna@example.com', role: 'user' });
+    expect(Object.keys(body).sort()).toEqual([
+      'createdAt',
+      'email',
+      'id',
+      'role',
+    ]);
+  });
+
+  it('stores only an argon2id hash of the password', async () => {
+    await register('anna@example.com', password);
+
+    const stored = await userRepository.findByEmail('anna@example.com');
+
+    expect(stored?.passwordHash).toMatch(
+      /^\$argon2id\$v=19\$m=65536,t=3,p=4\$/
+    );
+    expect(stored?.passwordHash).not.toContain(password);
+  });
+
+  it('answers 409 for an email that is already registered', async () => {
+    await register('anna@example.com', password);
+
+    const response = await register('ANNA@example.com', password);
+
+    expect(response.statusCode).toBe(409);
+    expect(response.headers['content-type']).toContain(
+      'application/problem+json'
+    );
+  });
+
+  it('rejects passwords shorter than 12 characters', async () => {
+    const response = await register('anna@example.com', 'elevenchars');
+
+    expect(response.statusCode).toBe(400);
+  });
+
+  it('has no composition rules: lowercase letters only are fine', async () => {
+    const response = await register('anna@example.com', 'abcdefghijkl');
+
+    expect(response.statusCode).toBe(201);
+  });
+
+  it('rejects an invalid email address', async () => {
+    const response = await register('not-an-email', password);
+
+    expect(response.statusCode).toBe(400);
   });
 });
 

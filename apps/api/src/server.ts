@@ -9,6 +9,9 @@ import {
 import { loadConfig } from './config.js';
 import { createDatabase } from './db/client.js';
 import { createPool, pingDatabase } from './db/pool.js';
+import { createDrizzleUserRepository } from './users/drizzleUserRepository.js';
+import { createArgon2PasswordHasher } from './users/passwordHasher.js';
+import { createUserService } from './users/userService.js';
 
 const config = loadConfig();
 
@@ -27,11 +30,16 @@ const comments = createCommentService({
   transaction: createDrizzleCommentTransaction(db),
   reportStrategy: config.REPORT_STRATEGY,
 });
+const users = createUserService({
+  users: createDrizzleUserRepository(db),
+  passwords: createArgon2PasswordHasher(),
+});
 
 const app = buildApp(
   {
     bears,
     comments,
+    users,
     checkDatabase: async () => {
       await pingDatabase(pool);
     },

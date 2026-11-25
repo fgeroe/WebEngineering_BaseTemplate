@@ -24,6 +24,12 @@ export class NotFoundError extends ApiError {
   readonly title = 'Resource not found';
 }
 
+export class ConflictError extends ApiError {
+  readonly status = 409;
+  readonly type = '/problems/conflict';
+  readonly title = 'Conflict';
+}
+
 export class ServiceUnavailableError extends ApiError {
   readonly status = 503;
   readonly type = '/problems/service-unavailable';

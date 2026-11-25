@@ -269,3 +269,173 @@ audio {
 .comment-container li p:nth-child(2) {
   flex: 5;
 }
+
+/* Account area in the navigation (Playground 6) */
+
+nav .account {
+  display: flex;
+  align-items: center;
+  padding-right: 2em;
+}
+
+nav .account-link {
+  font-size: 1.6rem;
+  line-height: 32px;
+  padding: 0 1.6rem;
+  background: #333;
+  color: white;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+nav .account-link:hover,
+nav .account-link:focus-visible {
+  background: black;
+}
+
+nav .account-link.active {
+  outline: 2px solid #333;
+  outline-offset: 2px;
+}
+
+/* Registration page (Playground 6) */
+
+.auth-page {
+  justify-content: center;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 480px;
+  margin: 2rem 0 4rem;
+  padding: 2.4rem 3.6rem 3.2rem;
+  background-color: rgb(168, 198, 226);
+  box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.2);
+}
+
+.auth-card h1 {
+  font-size: 2.6rem;
+  text-align: center;
+  margin: 0 0 0.8rem;
+}
+
+.auth-intro {
+  text-align: center;
+  margin: 0 0 2.4rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 2rem;
+}
+
+.field label {
+  font-size: 1.7rem;
+  font-weight: bold;
+  margin-bottom: 0.6rem;
+}
+
+.field input {
+  font-size: 1.6rem;
+  height: 38px;
+  padding: 0 1rem;
+  border: 1px solid #555;
+  border-radius: 4px;
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+.field input:focus-visible,
+.password-input button:focus-visible,
+.primary-button:focus-visible {
+  outline: 3px solid #333;
+  outline-offset: 2px;
+}
+
+.field input[aria-invalid='true'] {
+  border: 2px solid #8a0015;
+}
+
+.password-input {
+  display: flex;
+}
+
+.password-input input {
+  flex: 1;
+  border-radius: 4px 0 0 4px;
+}
+
+.password-input button {
+  font-family: 'Open Sans Condensed', sans-serif;
+  font-size: 1.5rem;
+  padding: 0 1.4rem;
+  border: 1px solid #555;
+  border-left: 0;
+  border-radius: 0 4px 4px 0;
+  background: #f2f2f2;
+  color: #2a2a2a;
+  cursor: pointer;
+}
+
+.field-hint,
+.field-error {
+  font-size: 1.4rem;
+  line-height: 1.4;
+  margin: 0.6rem 0 0;
+}
+
+.field-error {
+  color: #8a0015;
+  font-weight: bold;
+}
+
+.form-alert,
+.form-success {
+  padding: 1rem 1.4rem;
+  border-radius: 4px;
+}
+
+.form-alert {
+  background: #fdecee;
+  border-left: 4px solid #8a0015;
+  color: #8a0015;
+}
+
+.form-success {
+  background: #e8f5ec;
+  border-left: 4px solid #155724;
+  color: #155724;
+}
+
+.primary-button {
+  width: 100%;
+  margin-top: 0.8rem;
+  font-family: 'Open Sans Condensed', sans-serif;
+  font-size: 1.8rem;
+  line-height: 40px;
+  background: #333;
+  color: white;
+  border: 0;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.primary-button:hover {
+  background: black;
+}
+
+.primary-button:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.auth-footer {
+  text-align: center;
+  margin: 2rem 0 0;
+}
+
+.auth-footer a {
+  font-size: 1.7rem;
+  color: #2a2a2a;
+}

@@ -1,6 +1,7 @@
 import {
   index,
   integer,
+  pgEnum,
   pgTable,
   text,
   timestamp,
@@ -45,3 +46,18 @@ export const comments = pgTable(
     ),
   ]
 );
+
+// the database itself only accepts these values
+export const userRole = pgEnum('user_role', ['user', 'moderator']);
+
+export const users = pgTable('users', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  // stored trimmed and lower-cased, so the unique constraint is case-insensitive
+  email: text('email').notNull().unique(),
+  // argon2id hash incl. algorithm, parameters and salt - never the password
+  passwordHash: text('password_hash').notNull(),
+  role: userRole('role').notNull().default('user'),
+  createdAt: timestamp('created_at', { withTimezone: true, precision: 3 })
+    .notNull()
+    .defaultNow(),
+});
