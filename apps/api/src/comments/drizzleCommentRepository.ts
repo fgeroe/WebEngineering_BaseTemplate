@@ -1,8 +1,12 @@
-import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
-import type { Database } from '../db/client.js';
+import { and, asc, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
+import type { Database, Executor } from '../db/client.js';
 import { comments } from '../db/schema.js';
 import type { Comment } from './comment.js';
-import { groupByBear, type CommentRepository } from './commentRepository.js';
+import {
+  groupByBear,
+  type CommentRepository,
+  type CommentTransaction,
+} from './commentRepository.js';
 
 type CommentRow = typeof comments.$inferSelect;
 
@@ -16,8 +20,11 @@ function toComment(row: CommentRow): Comment {
   };
 }
 
+const isVisible = isNull(comments.hiddenAt);
+
+// db can be the database or an open transaction (see createDrizzleCommentTransaction)
 export function createDrizzleCommentRepository(
-  db: Database
+  db: Executor
 ): CommentRepository {
   return {
     listByBear: async (bearId, { limit, after }) => {
@@ -27,6 +34,8 @@ export function createDrizzleCommentRepository(
         .where(
           and(
             eq(comments.bearId, bearId),
+            isVisible,
+            // keyset condition: strictly older than the cursor position
             after === undefined
               ? undefined
               : sql`(${comments.createdAt}, ${comments.id}) < (${after.createdAt}::timestamptz, ${after.id}::uuid)`
@@ -39,10 +48,11 @@ export function createDrizzleCommentRepository(
 
     listByBears: async (bearIds) => {
       if (bearIds.length === 0) return new Map();
+      // one query for all bears: WHERE bear_id IN (...)
       const rows = await db
         .select()
         .from(comments)
-        .where(inArray(comments.bearId, bearIds))
+        .where(and(inArray(comments.bearId, bearIds), isVisible))
         .orderBy(asc(comments.createdAt), asc(comments.id));
       return groupByBear(bearIds, rows.map(toComment));
     },
@@ -51,7 +61,7 @@ export function createDrizzleCommentRepository(
       const [row] = await db
         .select()
         .from(comments)
-        .where(eq(comments.id, id))
+        .where(and(eq(comments.id, id), isVisible))
         .limit(1);
       return row === undefined ? undefined : toComment(row);
     },
@@ -70,5 +80,43 @@ export function createDrizzleCommentRepository(
         .returning({ id: comments.id });
       return deleted.length > 0;
     },
+
+    findReportState: async (id, { forUpdate = false } = {}) => {
+      const query = db
+        .select({
+          reportCount: comments.reportCount,
+          hiddenAt: comments.hiddenAt,
+        })
+        .from(comments)
+        .where(eq(comments.id, id));
+      // FOR UPDATE: other transactions that want this row wait until we commit
+      const [row] = forUpdate ? await query.for('update') : await query;
+      return row === undefined
+        ? undefined
+        : {
+            reportCount: row.reportCount,
+            hiddenAt: row.hiddenAt?.toISOString() ?? null,
+          };
+    },
+
+    saveReportState: async (id, { reportCount, hiddenAt }) => {
+      await db
+        .update(comments)
+        .set({
+          reportCount,
+          hiddenAt: hiddenAt === null ? null : new Date(hiddenAt),
+        })
+        .where(eq(comments.id, id));
+    },
   };
+}
+
+export function createDrizzleCommentTransaction(
+  db: Database
+): CommentTransaction {
+  // BEGIN ... COMMIT (or ROLLBACK if the work throws), all on one connection
+  return async (work) =>
+    await db.transaction(
+      async (tx) => await work(createDrizzleCommentRepository(tx))
+    );
 }

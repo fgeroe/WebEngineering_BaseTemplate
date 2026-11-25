@@ -2,7 +2,10 @@ import { buildApp } from './app.js';
 import { createBearService } from './bears/bearService.js';
 import { createDrizzleBearRepository } from './bears/drizzleBearRepository.js';
 import { createCommentService } from './comments/commentService.js';
-import { createDrizzleCommentRepository } from './comments/drizzleCommentRepository.js';
+import {
+  createDrizzleCommentRepository,
+  createDrizzleCommentTransaction,
+} from './comments/drizzleCommentRepository.js';
 import { loadConfig } from './config.js';
 import { createDatabase } from './db/client.js';
 import { createPool, pingDatabase } from './db/pool.js';
@@ -21,6 +24,8 @@ const bears = createBearService(createDrizzleBearRepository(db));
 const comments = createCommentService({
   bears,
   comments: createDrizzleCommentRepository(db),
+  transaction: createDrizzleCommentTransaction(db),
+  reportStrategy: config.REPORT_STRATEGY,
 });
 
 const app = buildApp(

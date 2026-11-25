@@ -24,6 +24,7 @@ services:
       PORT: 3000
       DATABASE_URL: postgres://${POSTGRES_USER:-bears}:${POSTGRES_PASSWORD:-bears}@db:5432/${POSTGRES_DB:-bears}
       DB_POOL_MAX: ${DB_POOL_MAX:-10}
+      REPORT_STRATEGY: ${REPORT_STRATEGY:-locked}
       WIKIPEDIA_API_URL: ${WIKIPEDIA_API_URL:-https://en.wikipedia.org/w/api.php}
       WIKIPEDIA_TIMEOUT_MS: ${WIKIPEDIA_TIMEOUT_MS:-5000}
       ENABLE_DEBUG_ROUTES: ${ENABLE_DEBUG_ROUTES:-false}

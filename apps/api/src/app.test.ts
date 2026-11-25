@@ -5,7 +5,10 @@ import type { Bear } from './bears/bear.js';
 import { createInMemoryBearRepository } from './bears/bearRepository.js';
 import { createBearService } from './bears/bearService.js';
 import type { CommentPage } from './comments/comment.js';
-import { createInMemoryCommentRepository } from './comments/commentRepository.js';
+import {
+  createInMemoryCommentRepository,
+  createInMemoryCommentTransaction,
+} from './comments/commentRepository.js';
 import { createCommentService } from './comments/commentService.js';
 
 const testBears: Bear[] = [
@@ -33,9 +36,11 @@ let databaseUp: boolean;
 beforeEach(() => {
   databaseUp = true;
   const bears = createBearService(createInMemoryBearRepository(testBears));
+  const commentRepository = createInMemoryCommentRepository();
   const comments = createCommentService({
     bears,
-    comments: createInMemoryCommentRepository(),
+    comments: commentRepository,
+    transaction: createInMemoryCommentTransaction(commentRepository),
   });
   app = buildApp({
     bears,
@@ -186,6 +191,48 @@ describe('comments', () => {
     const response = await app.inject({
       method: 'DELETE',
       url: `/api/comments/${unknownCommentId}`,
+    });
+
+    expect(response.statusCode).toBe(404);
+  });
+});
+
+describe('reports', () => {
+  it('hides a comment after the third report', async () => {
+    const created = await app.inject({
+      method: 'POST',
+      url: '/api/bears/ursus-arctos/comments',
+      payload: { author: 'Troll', text: 'Spam' },
+    });
+    const { id } = created.json<{ id: string }>();
+
+    const reports = [];
+    for (let i = 0; i < 3; i++) {
+      const response = await app.inject({
+        method: 'POST',
+        url: `/api/comments/${id}/report`,
+      });
+      reports.push(response.json<{ reportCount: number; hidden: boolean }>());
+    }
+
+    expect(reports.map((report) => report.hidden)).toEqual([
+      false,
+      false,
+      true,
+    ]);
+    expect(reports[2]?.reportCount).toBe(3);
+
+    const listed = await app.inject({
+      method: 'GET',
+      url: '/api/bears/ursus-arctos/comments',
+    });
+    expect(listed.json<CommentPage>().items).toHaveLength(0);
+  });
+
+  it('answers 404 when reporting an unknown comment', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: `/api/comments/${unknownCommentId}/report`,
     });
 
     expect(response.statusCode).toBe(404);
